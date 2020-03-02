@@ -21,6 +21,13 @@ namespace DiscordBot
 
         public async Task Run(string[] args)
         {
+
+            var bot_key = Environment.GetEnvironmentVariable("bot_key");
+            var owner = Environment.GetEnvironmentVariable("owner");
+            if (bot_key == null || owner == null)
+            {
+                return;
+            }
             using (var services = ConfigureServices())
             {
                 var client = services.GetRequiredService<DiscordSocketClient>();
@@ -34,7 +41,7 @@ namespace DiscordBot
                 // Tokens should be considered secret data and never hard-coded.
                 // We can read from the environment variable to avoid hardcoding.
                 Console.WriteLine("test");
-                await client.LoginAsync(TokenType.Bot, "NTAzNjQ0NDI2MDE5NjY4MDAz.XlzJUw.a9e0_yCGehMhyMmAQ5bpQWsndzI");
+                await client.LoginAsync(TokenType.Bot, bot_key);
                 await client.StartAsync();
                 services.GetRequiredService<StatsService>().Init();
 
@@ -58,8 +65,6 @@ namespace DiscordBot
             await cmd2.ExecuteNonQueryAsync();
 
             await connection.CloseAsync();
-            await userRepo.RemoveAllUsersFromRole("Owner");
-            await userRepo.AddRoleToUser(107649869665046528L, "Owner");
         }
 
         private Task Log(LogMessage msg)
