@@ -17,13 +17,13 @@ namespace DiscordBot.Modules
 {
     public class SoundModule : MyCommandSet
     {
-        private readonly SoundsService soundsService;
+        private readonly IAudioRepo audioRepo;
         private readonly StatsService statsService;
         private readonly IUserRepo userRepo;
 
-        public SoundModule(SoundsService soundsService, StatsService statsService, IUserRepo userRepo)
+        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo)
         {
-            this.soundsService = soundsService;
+            this.audioRepo = audioRepo;
             this.statsService = statsService;
             this.userRepo = userRepo;
         }
@@ -36,26 +36,23 @@ namespace DiscordBot.Modules
             {
                 return;
             }
-            var sounds = soundsService.GetSounds();
             if (parts.Length == 1)
             {
-                await context.Reply(string.Join("\n", sounds.Keys.Select(x => $"!{x}")));
+                var categories = await audioRepo.GetCategories();
+                await context.Reply(string.Join("\n", categories.Select(x => $"!{x}")));
             }
             else if (parts.Length == 2)
             {
-                var key = parts[1];
-                if (sounds.TryGetValue(parts[1], out var value))
+                var sounds = await audioRepo.GetAudioForCategory(parts[1]);
+                if (sounds.Count == 0)
                 {
-                    var lst = value.Select(x => x.Split('\\')[2]);
-                    var msg = string.Join("\n", lst);
-                    await context.Reply(msg);
+                    await context.Reply("No sounds found for that category.");
                 }
                 else
                 {
-                    await context.Reply(string.Join("\n", sounds.Keys.Select(x => $"!{x}")));
+                    await context.Reply(string.Join(", ", sounds.Select(x => x.Name)));
                 }
             }
-            //await context.Reply("!Pong");
         }
 
         [MyCommand("history")]
@@ -95,8 +92,7 @@ namespace DiscordBot.Modules
 
         public async Task PlaySound(SocketCommandContext context, string person, string quote)
         {
-            var playlist = soundsService.GetSounds()[person];
-            var path = playlist.Where(x => x.Split('\\').Last() == quote).FirstOrDefault();
+            var path = await audioRepo.GetPathForAudio(person, quote);
             if (path == null)
             {
                 //TODO: print error
@@ -107,10 +103,10 @@ namespace DiscordBot.Modules
 
         public async Task PlaySound(SocketCommandContext context, string person)
         {
-            var playlist = soundsService.GetSounds()[person];
-            var pathIdx = StaticRandom.Next(playlist.Length);
+            var playlist = await audioRepo.GetAudioForCategory(person);
+            var pathIdx = StaticRandom.Next(playlist.Count);
             var path = playlist[pathIdx];
-            await DoThing(context, path);
+            await DoThing(context, path.Path);
         }
 
         private async Task DoThing(SocketCommandContext context, string path)

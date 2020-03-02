@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using DiscordBot.Modules;
 using DiscordBot.Services;
+using Domain.Repos;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -17,14 +18,14 @@ namespace DiscordBot
     class CommandHandler
     {
         private readonly DiscordSocketClient _client;
-        private readonly SoundsService _soundsService;
         private readonly IServiceProvider serviceProvider;
+        private readonly IAudioRepo audioRepo;
         private Dictionary<string, MethodInfo> commands = null;
          
-        public CommandHandler(DiscordSocketClient client, SoundsService soundsService, IServiceProvider serviceProvider)
+        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider, IAudioRepo audioRepo)
         {
-            _soundsService = soundsService;
             this.serviceProvider = serviceProvider;
+            this.audioRepo = audioRepo;
             _client = client;
         }
 
@@ -46,11 +47,11 @@ namespace DiscordBot
                 .Where(x => x.GetCustomAttributes(typeof(MyCommand), false).Length > 0);
         }
 
-        private Task HandleCommandAsync(SocketMessage rawMessage)
+        private async Task HandleCommandAsync(SocketMessage rawMessage)
         {
             // Ignore system messages and messages from bots
-            if (!(rawMessage is SocketUserMessage message)) return Task.CompletedTask;
-            if (message.Source != MessageSource.User) return Task.CompletedTask;
+            if (!(rawMessage is SocketUserMessage message)) return;
+            if (message.Source != MessageSource.User) return;
 
             // Create a number to track where the prefix ends and the command begins
             int argPos = 0;
@@ -59,35 +60,11 @@ namespace DiscordBot
             if (!(message.HasCharPrefix('!', ref argPos) ||
                 message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
-                return Task.CompletedTask;
+                return;
 
             var command = message.Content.Substring(argPos).Split(' ');
-            var sounds = _soundsService.GetSounds();
+
             var context = new SocketCommandContext(_client, message);
-            if (sounds.TryGetValue(command[0], out var soundsList))
-            {
-                var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                if (command.Length == 2)
-                {
-                    var thread = new Thread(async () =>
-                    {
-                        await soundMod.PlaySound(context, command[0], command[1]);
-                    });
-                    thread.IsBackground = true;
-                    thread.Start();
-                    return Task.CompletedTask;
-                }
-                else if (command.Length == 1)
-                {
-                    var thread = new Thread(async () =>
-                    {
-                        await soundMod.PlaySound(context, command[0]);
-                    });
-                    thread.IsBackground = true;
-                    thread.Start();
-                    return Task.CompletedTask;
-                }
-            }
             if (commands.TryGetValue(command[0], out var method))
             {
                 var parent = serviceProvider.GetRequiredService(method.DeclaringType);
@@ -99,8 +76,37 @@ namespace DiscordBot
                 {
                     throw ex;
                 }
+                return;
             }
-            return Task.CompletedTask;
+
+            // var sounds = _soundsService.GetSounds();
+            var categories = await audioRepo.GetCategories();
+            if (categories.Contains(command[0].ToLower()))
+            {
+                var soundMod = serviceProvider.GetRequiredService<SoundModule>();
+                if (command.Length == 2)
+                {
+                    var thread = new Thread(async () =>
+                    {
+                        await soundMod.PlaySound(context, command[0], command[1]);
+                    });
+                    thread.IsBackground = true;
+                    thread.Start();
+                    return;
+                }
+                else if (command.Length == 1)
+                {
+                    var thread = new Thread(async () =>
+                    {
+                        await soundMod.PlaySound(context, command[0]);
+                    });
+                    thread.IsBackground = true;
+                    thread.Start();
+                    return;
+                }
+            }
+
+            return;
         }
     }
 }
