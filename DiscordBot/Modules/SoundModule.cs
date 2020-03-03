@@ -66,7 +66,13 @@ namespace DiscordBot.Modules
         [MyCommand("upload")]
         public async Task Upload(SocketCommandContext context)
         {
-            var test = await userRepo.UserHasAnyRole(context.User.Id, "Upload", "Owner");
+            var hasUploadRole = await userRepo.UserHasAnyRole(context.User.Id, "Upload");
+            var isOwner = context.User.Id.ToString() == Environment.GetEnvironmentVariable("owner");
+            if (!(hasUploadRole || isOwner))
+            {
+                await context.Reply("no");
+                return;
+            }
             var attachments = context.Message.Attachments;
             if (attachments.Count != 1)
             {

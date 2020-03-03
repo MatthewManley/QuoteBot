@@ -21,11 +21,11 @@ namespace DiscordBot
 
         public async Task Run(string[] args)
         {
-
             var bot_key = Environment.GetEnvironmentVariable("bot_key");
-            var owner = Environment.GetEnvironmentVariable("owner");
-            if (bot_key == null || owner == null)
+            var db_path = Environment.GetEnvironmentVariable("db_path");
+            if (bot_key == null || db_path == null)
             {
+                Console.WriteLine("Not all environment variables set!");
                 return;
             }
             using (var services = ConfigureServices())
@@ -44,6 +44,7 @@ namespace DiscordBot
                 await client.LoginAsync(TokenType.Bot, bot_key);
                 await client.StartAsync();
                 services.GetRequiredService<StatsService>().Init();
+
 
                 // Here we initialize the logic required to register our commands.
                 services.GetRequiredService<CommandHandler>().InitializeAsync();
@@ -90,7 +91,7 @@ namespace DiscordBot
         private SqliteConnection BuildSqliteConnection(IServiceProvider serviceProvider)
         {
             var connectionStringBuilder = new SqliteConnectionStringBuilder();
-            connectionStringBuilder.DataSource = "Db.sqlite";
+            connectionStringBuilder.DataSource = Environment.GetEnvironmentVariable("db_path");
             return new SqliteConnection(connectionStringBuilder.ConnectionString);
         }
     }
