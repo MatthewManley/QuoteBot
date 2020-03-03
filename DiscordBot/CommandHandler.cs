@@ -86,22 +86,42 @@ namespace DiscordBot
                 var soundMod = serviceProvider.GetRequiredService<SoundModule>();
                 if (command.Length == 2)
                 {
-                    var thread = new Thread(async () =>
+                    try
                     {
-                        await soundMod.PlaySound(context, command[0], command[1]);
-                    });
-                    thread.IsBackground = true;
-                    thread.Start();
+                        var thread = new Thread(async () =>
+                        {
+                            try
+                            {
+                                await soundMod.PlaySound(context, command[0], command[1]);
+                            }
+                            catch (Exception)
+                            {}
+                        });
+                        thread.IsBackground = true;
+                        thread.Start();
+                    }
+                    catch (Exception)
+                    {}
                     return;
                 }
                 else if (command.Length == 1)
                 {
-                    var thread = new Thread(async () =>
+                    try
                     {
-                        await soundMod.PlaySound(context, command[0]);
-                    });
-                    thread.IsBackground = true;
-                    thread.Start();
+                        var thread = new Thread(async () =>
+                        {
+                            try
+                            {
+                                await soundMod.PlaySound(context, command[0]);
+                            }
+                            catch (Exception)
+                            {}
+                        });
+                        thread.IsBackground = true;
+                        thread.Start();
+                    }
+                    catch (Exception)
+                    {}
                     return;
                 }
             }

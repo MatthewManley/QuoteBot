@@ -61,7 +61,7 @@ namespace DiscordBot.Modules
         {
             var history = statsService.GetHistory();
             history.Reverse();
-            await context.Reply(string.Join("\n", history));
+            await context.Reply(string.Join("\n", history.Select(x => $"!{x.Category} {x.Name}")));
         }
 
         [MyCommand("upload")]
