@@ -10,7 +10,7 @@ namespace Domain.Repos
         Task<List<Audio>> GetAllAudio();
         Task<List<Audio>> GetAudioForCategory(string category);
         Task<List<string>> GetCategories();
-        Task<string> GetPathForAudio(string category, string name);
+        Task<Audio> GetAudio(string category, string name);
         Task RemoveAudio(string name, string category);
     }
 }

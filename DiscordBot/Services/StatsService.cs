@@ -3,16 +3,17 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Domain.Models;
 
 namespace DiscordBot.Services
 {
     public class StatsService
     {
         private DateTime startTime;
-        private ConcurrentQueue<string> historyQueue;
+        private ConcurrentQueue<Audio> historyQueue;
         public StatsService()
         {
-            historyQueue = new ConcurrentQueue<string>();
+            historyQueue = new ConcurrentQueue<Audio>();
         }
 
         public void Init()
@@ -25,9 +26,9 @@ namespace DiscordBot.Services
             return DateTime.Now - startTime;
         }
 
-        public void AddToHistory(string person, string quote)
+        public void AddToHistory(Audio audio)
         {
-            historyQueue.Enqueue($"!{person} {quote}");
+            historyQueue.Enqueue(audio);
             while (historyQueue.Count > 5)
             {
                 if (!historyQueue.TryDequeue(out var _))
@@ -37,7 +38,7 @@ namespace DiscordBot.Services
             }
         }
 
-        public List<string> GetHistory()
+        public List<Audio> GetHistory()
         {
             return historyQueue.ToList();
         }

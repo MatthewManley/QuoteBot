@@ -2,6 +2,7 @@
 using Discord.Audio;
 using Discord.Commands;
 using DiscordBot.Services;
+using Domain.Models;
 using Domain.Repos;
 using System;
 using System.Collections.Generic;
@@ -98,20 +99,35 @@ namespace DiscordBot.Modules
 
         public async Task PlaySound(SocketCommandContext context, string person, string quote)
         {
-            var path = await audioRepo.GetPathForAudio(person, quote);
+            var path = await audioRepo.GetAudio(person, quote);
             if (path == null)
             {
                 //TODO: print error
                 return;
             }
-            await DoThing(context, path);
+            statsService.AddToHistory(path);
+            await DoThing(context, path.Path);
         }
 
         public async Task PlaySound(SocketCommandContext context, string person)
         {
             var playlist = await audioRepo.GetAudioForCategory(person);
-            var pathIdx = StaticRandom.Next(playlist.Count);
-            var path = playlist[pathIdx];
+            Audio path;
+            if (playlist.Count == 1)
+            {
+                path = playlist.First();
+            }
+            else
+            {
+                Audio last = null;
+                do
+                {
+                    var pathIdx = StaticRandom.Next(playlist.Count);
+                    path = playlist[pathIdx];
+                    last = statsService.GetHistory().LastOrDefault();
+                } while (last != null && last.Equals(path));
+            }
+            statsService.AddToHistory(path);
             await DoThing(context, path.Path);
         }
 

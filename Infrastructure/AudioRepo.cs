@@ -56,19 +56,24 @@ namespace Infrastructure
             return result;
         }
 
-        public async Task<string> GetPathForAudio(string category, string name)
+        public async Task<Audio> GetAudio(string category, string name)
         {
             await connection.OpenAsync();
             var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT path FROM audio WHERE category = $category AND name = $name LIMIT 1;";
+            cmd.CommandText = "SELECT category, name, path FROM audio WHERE category = $category AND name = $name LIMIT 1;";
             cmd.Parameters.AddWithValue("$category", category.ToLower());
             cmd.Parameters.AddWithValue("$name", name.ToLower());
-            string result = null;
+            Audio result = null;
             using (var reader = await cmd.ExecuteReaderAsync())
             {
                 if (await reader.ReadAsync())
                 {
-                    result = reader.GetString(0);
+                    result = new Audio
+                    {
+                        Category = reader.GetString(0),
+                        Name = reader.GetString(1),
+                        Path = reader.GetString(2)
+                    };
                 }
             }
             connection.Close();
