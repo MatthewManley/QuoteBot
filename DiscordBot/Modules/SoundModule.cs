@@ -117,8 +117,6 @@ namespace DiscordBot.Modules
 
         private async Task DoThing(SocketCommandContext context, string path)
         {
-            var pathParts = path.Split('\\');
-            statsService.AddToHistory(pathParts[1], pathParts[2]);
             var vc = (context.User as IGuildUser)?.VoiceChannel;
             if (vc == null)
             {
@@ -127,6 +125,7 @@ namespace DiscordBot.Modules
             }
             // Create FFmpeg using the previous example
             //await context.Channel.SendMessageAsync(path);
+            path = Path.Combine(Environment.GetEnvironmentVariable("audio_path"), path);
             await Play(vc, path);
         }
 

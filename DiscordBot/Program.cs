@@ -23,7 +23,8 @@ namespace DiscordBot
         {
             var bot_key = Environment.GetEnvironmentVariable("bot_key");
             var db_path = Environment.GetEnvironmentVariable("db_path");
-            if (bot_key == null || db_path == null)
+            var audio_path = Environment.GetEnvironmentVariable("audio_path");
+            if (bot_key == null || db_path == null || audio_path == null)
             {
                 Console.WriteLine("Not all environment variables set!");
                 return;
