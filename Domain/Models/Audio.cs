@@ -1,18 +1,21 @@
+using System;
+
 namespace Domain.Models
 {
-    public class Audio
+    public class Audio : IEquatable<Audio>
     {
         public string Category { get; set; }
         public string Name { get; set; }
         public string Path { get; set; }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object obj) => Equals(obj as Audio);
+        public override int GetHashCode() => (Category, Name, Path).GetHashCode();
+
+        public bool Equals(Audio other)
         {
-            if (!(obj is Audio audio))
-            {
+            if (other is null)
                 return false;
-            }
-            return Path.Equals(audio.Path);
+            return Path == other.Path;
         }
     }
 }

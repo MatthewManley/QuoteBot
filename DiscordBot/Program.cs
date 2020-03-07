@@ -8,6 +8,7 @@ using Infrastructure;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DiscordBot
@@ -21,12 +22,11 @@ namespace DiscordBot
 
         public async Task Run(string[] args)
         {
-            var bot_key = Environment.GetEnvironmentVariable("bot_key");
-            var db_path = Environment.GetEnvironmentVariable("db_path");
-            var audio_path = Environment.GetEnvironmentVariable("audio_path");
-            if (bot_key == null || db_path == null || audio_path == null)
+            var missingSettings = Settings.MissingSettings().ToList();
+            if (missingSettings.Count > 0)
             {
-                Console.WriteLine("Not all environment variables set!");
+                Console.WriteLine("Missing required environment variables: ");
+                Console.WriteLine(string.Join(", ", missingSettings));
                 return;
             }
             using (var services = ConfigureServices())
@@ -42,7 +42,7 @@ namespace DiscordBot
                 // Tokens should be considered secret data and never hard-coded.
                 // We can read from the environment variable to avoid hardcoding.
                 Console.WriteLine("test");
-                await client.LoginAsync(TokenType.Bot, bot_key);
+                await client.LoginAsync(TokenType.Bot, Settings.BotKey);
                 await client.StartAsync();
                 services.GetRequiredService<StatsService>().Init();
 
@@ -79,6 +79,7 @@ namespace DiscordBot
         {
             return new ServiceCollection()
                 .AddSingleton<DiscordSocketClient>()
+                .AddTransient<IDiscordClient>(x => x.GetRequiredService<DiscordSocketClient>())
                 .AddSingleton<CommandHandler>()
                 .AddTransient(BuildSqliteConnection)
                 .AddTransient<IUserRepo, UserRepo>()

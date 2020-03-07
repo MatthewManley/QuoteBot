@@ -21,12 +21,14 @@ namespace DiscordBot.Modules
         private readonly IAudioRepo audioRepo;
         private readonly StatsService statsService;
         private readonly IUserRepo userRepo;
+        private readonly IDiscordClient client;
 
-        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo)
+        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo, IDiscordClient client)
         {
             this.audioRepo = audioRepo;
             this.statsService = statsService;
             this.userRepo = userRepo;
+            this.client = client;
         }
 
         [MyCommand("list")]
@@ -68,7 +70,7 @@ namespace DiscordBot.Modules
         public async Task Upload(SocketCommandContext context)
         {
             var hasUploadRole = await userRepo.UserHasAnyRole(context.User.Id, "Upload");
-            var isOwner = context.User.Id.ToString() == Environment.GetEnvironmentVariable("owner");
+            var isOwner = Settings.Owner.HasValue && context.User.Id == Settings.Owner.Value;
             if (!(hasUploadRole || isOwner))
             {
                 await context.Reply("no");
@@ -84,81 +86,160 @@ namespace DiscordBot.Modules
             var section = context.Message.Content.Split(" ")[1];
             try
             {
-                var dir = $"audio\\{section}";
-                if (!Directory.Exists(dir))
+                var newName = Guid.NewGuid().ToString();
+                var tempPath = Path.Combine(Settings.TempPath, newName);
+                new WebClient().DownloadFile(attachment.Url, tempPath);
+                var duration = await GetDuration(tempPath);
+                if (duration > 30)
                 {
-                    Directory.CreateDirectory(dir);
+                    await context.Reply("30 seconds maximum");
+                    return;
                 }
-                new WebClient().DownloadFile(attachment.Url, $"{dir}\\{attachment.Filename}");
             }
             catch (Exception ex)
             {
-                throw ex;
+                await context.Reply("Something went wrong. Are you sure thats an audio file?");
             }
         }
 
-        public async Task PlaySound(SocketCommandContext context, string person, string quote)
+        public async Task PlaySound(SocketCommandContext context)
         {
-            var path = await audioRepo.GetAudio(person, quote);
-            if (path == null)
+            if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
             {
-                //TODO: print error
+                await context.Reply("I am already doing a quote clam the fuck down.");
                 return;
             }
-            statsService.AddToHistory(path);
-            await DoThing(context, path.Path);
-        }
-
-        public async Task PlaySound(SocketCommandContext context, string person)
-        {
-            var playlist = await audioRepo.GetAudioForCategory(person);
-            Audio path;
-            if (playlist.Count == 1)
+            var argPos = 0;
+            context.Message.HasPrefix(client.CurrentUser, ref argPos);
+            var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var category = commandParts[0];
+            IVoiceChannel channel = null;
+            string quote = null;
+            for (int i = 1; i < commandParts.Length; i++)
             {
-                path = playlist.First();
+                var part = commandParts[i].ToLower();
+                if (part.Equals("-c") || part.Equals("--channel"))
+                {
+                    if (!(channel is null))
+                    {
+                        await context.Reply("How many voice channels you think I can take at once??? Cause I think its one...");
+                        return;
+                    }
+                    // Error if there is no channel after -c or its not a proper mention
+                    if (i + 1 >= commandParts.Length ||
+                        !TryGetVoiceChannel(context, commandParts[i + 1], out var voiceChannel))
+                    {
+                        await context.Reply("Thats ain't no valid voice channel");
+                        return;
+                    }
+                    i++; // Skip pass the channel id/name
+                    channel = voiceChannel;
+                    continue; // Continue onto any remaining arguments
+                }
+                else if (part.Equals("-q") || part.Equals("--quote") || part.Equals("-f") || part.Equals("--file"))
+                {
+                    if (!(quote is null))
+                    {
+                        await context.Reply("Don't be greedy, you only get one quote at a time.");
+                        return;
+                    }
+                    if (i + 1 >= commandParts.Length)
+                    {
+                        await context.Reply("Don't leave me hanging, say what quote you want played.");
+                        return;
+                    }
+                    i++;
+                    quote = commandParts[i].ToLower();
+                }
+                else if (quote is null)
+                {
+                    quote = part;
+                }
+                else
+                {
+                    await context.Reply("You gave me to much stuff. What am i supposed to do with all that?");
+                    return;
+                }
+            }
+            channel = channel ?? (context.User as IGuildUser)?.VoiceChannel;
+            if (channel is null)
+            {
+                await context.Reply("You gotta be in a voice channel or use -c channelName");
+                return;
+            }
+            Audio audio;
+            if (quote is null)
+            {
+                var playlist = await audioRepo.GetAudioForCategory(category);
+                var takeAmount = Math.Min(Settings.RecentCount, playlist.Count - 1);
+                var history = statsService.GetHistory().AsEnumerable().Reverse().Take(takeAmount);
+                var available = playlist.Except(history).ToList();
+                var index = StaticRandom.Next(available.Count);
+                audio = available[index];
             }
             else
             {
-                Audio last = null;
-                do
+                audio = await audioRepo.GetAudio(category, quote);
+                if (audio is null)
                 {
-                    var pathIdx = StaticRandom.Next(playlist.Count);
-                    path = playlist[pathIdx];
-                    last = statsService.GetHistory().LastOrDefault();
-                } while (last != null && last.Equals(path));
+                    await context.Reply("That quote don't exist...");
+                    return;
+                }
             }
-            statsService.AddToHistory(path);
-            await DoThing(context, path.Path);
-        }
-
-        private async Task DoThing(SocketCommandContext context, string path)
-        {
-            var vc = (context.User as IGuildUser)?.VoiceChannel;
-            if (vc == null)
+            // Katie isn't allow to use her own voice
+            if (context.User.Id == 302955588327833622 && audio.Category == "heck")
             {
-                await context.Reply("You have to be in a voice channel to do this.");
-                return;
+                audio = await audioRepo.GetAudio("trump", "i-dont-think-so");
             }
-            // Create FFmpeg using the previous example
-            //await context.Channel.SendMessageAsync(path);
-            path = Path.Combine(Environment.GetEnvironmentVariable("audio_path"), path);
-            await Play(vc, path);
+            statsService.AddToHistory(audio);
+            await Play(channel, audio);
         }
 
-        private Process CreateStream(string path)
+        private static bool TryGetVoiceChannel(SocketCommandContext context, string argument, out IVoiceChannel voiceChannel)
+        {
+            if (ulong.TryParse(argument, out var channelId))
+            {
+                voiceChannel = context.Guild.GetVoiceChannel(channelId);
+            }
+            else
+            {
+                var name = argument.ToLower();
+                voiceChannel = context.Guild.VoiceChannels.FirstOrDefault(x => x.Name.ToLower() == argument);
+            }
+            return !(voiceChannel is null);
+
+        }
+
+        private static Process CreateStream(string path)
         {
             return Process.Start(new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -af \"adelay=100|100\" -ac 2 -f s16le -ar 48000 pipe:1",
+                Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -af \"adelay=50|50\" -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             });
         }
 
-        private async Task Play(IVoiceChannel vc, string path)
+        private static async Task<double> GetDuration(string path)
         {
+            using (var proc = Process.Start(new ProcessStartInfo
+            {
+                FileName = "ffprobe",
+                Arguments = $"-show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i \"{path}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true
+            }))
+            {
+                var result = await proc.StandardOutput.ReadToEndAsync();
+                return Convert.ToDouble(result);
+            }
+        }
+
+        private async Task Play(IVoiceChannel vc, Audio audio)
+        {
+            var path = Path.Combine(Settings.AudioPath, audio.Path);
             var audioClient = await vc.ConnectAsync();
             using (var ffmpeg = CreateStream(path))
             using (var output = ffmpeg.StandardOutput.BaseStream)

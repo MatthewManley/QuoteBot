@@ -21,7 +21,7 @@ namespace DiscordBot
         private readonly IServiceProvider serviceProvider;
         private readonly IAudioRepo audioRepo;
         private Dictionary<string, MethodInfo> commands = null;
-         
+
         public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider, IAudioRepo audioRepo)
         {
             this.serviceProvider = serviceProvider;
@@ -38,7 +38,7 @@ namespace DiscordBot
                 .Select(GetCommandMethods)
                 .SelectMany(x => x)
                 .ToDictionary(x => ((MyCommand)x.GetCustomAttribute(typeof(MyCommand))).Name);
-            _client.MessageReceived += HandleCommandAsync;
+            _client.MessageReceived += HandleCommandAsyncWrapper;
         }
 
         private IEnumerable<MethodInfo> GetCommandMethods(Type x)
@@ -47,86 +47,48 @@ namespace DiscordBot
                 .Where(x => x.GetCustomAttributes(typeof(MyCommand), false).Length > 0);
         }
 
+        private Task HandleCommandAsyncWrapper(SocketMessage rawMessage)
+        {
+            Thread t = new Thread(async () =>
+            {
+                await HandleCommandAsync(rawMessage);
+            });
+            t.IsBackground = true;
+            t.Start();
+            return Task.CompletedTask;
+        }
+
         private async Task HandleCommandAsync(SocketMessage rawMessage)
         {
             // Ignore system messages and messages from bots
-            if (!(rawMessage is SocketUserMessage message)) return;
-            if (message.Source != MessageSource.User) return;
-
-            // Create a number to track where the prefix ends and the command begins
-            int argPos = 0;
-
-            // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!(message.HasCharPrefix('!', ref argPos) ||
-                message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
-                message.Author.IsBot)
+            if (!(rawMessage is SocketUserMessage message))
                 return;
 
-            var command = message.Content.Substring(argPos).Split(' ');
+            if (message.Source != MessageSource.User)
+                return;
+
+            int argPos = 0;
+            // Determine if the message is a command based on the prefix and make sure no bots trigger commands
+            if (!message.HasPrefix(_client.CurrentUser, ref argPos))
+                return;
+
+            var command = message.Content.Substring(argPos).Split(' ')[0].ToLower();
 
             var context = new SocketCommandContext(_client, message);
-            if (commands.TryGetValue(command[0], out var method))
+            if (commands.TryGetValue(command, out var method))
             {
                 var parent = serviceProvider.GetRequiredService(method.DeclaringType);
-                try
-                {
-                    method.Invoke(parent, new object[] { context });
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
+                method.Invoke(parent, new object[] { context });
                 return;
             }
 
-            // var sounds = _soundsService.GetSounds();
             var categories = await audioRepo.GetCategories();
-            if (categories.Contains(command[0].ToLower()))
+            if (categories.Contains(command))
             {
                 var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                if (command.Length == 2)
-                {
-                    try
-                    {
-                        var thread = new Thread(async () =>
-                        {
-                            try
-                            {
-                                await soundMod.PlaySound(context, command[0], command[1]);
-                            }
-                            catch (Exception)
-                            {}
-                        });
-                        thread.IsBackground = true;
-                        thread.Start();
-                    }
-                    catch (Exception)
-                    {}
-                    return;
-                }
-                else if (command.Length == 1)
-                {
-                    try
-                    {
-                        var thread = new Thread(async () =>
-                        {
-                            try
-                            {
-                                await soundMod.PlaySound(context, command[0]);
-                            }
-                            catch (Exception)
-                            {}
-                        });
-                        thread.IsBackground = true;
-                        thread.Start();
-                    }
-                    catch (Exception)
-                    {}
-                    return;
-                }
+                await soundMod.PlaySound(context);
+                return;
             }
-
-            return;
         }
     }
 }
