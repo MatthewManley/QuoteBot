@@ -19,6 +19,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Build the Docker image
-      run: docker build --file Dockerfile --tag docker push docker.pkg.github.com/matthewmanley/quotebot/QuoteBot .
+      run: docker build --file Dockerfile --tag docker.pkg.github.com/matthewmanley/quotebot/quotebot .
     - name: Push the Docker image
-      run: docker push docker.pkg.github.com/matthewmanley/quotebot/QuoteBot
+      run: docker push docker.pkg.github.com/matthewmanley/quotebot/quotebot
