@@ -22,4 +22,3 @@ jobs:
       run: docker build --file Dockerfile --tag docker push docker.pkg.github.com/matthewmanley/quotebot/QuoteBot .
     - name: Push the Docker image
       run: docker push docker.pkg.github.com/matthewmanley/quotebot/QuoteBot
-=
