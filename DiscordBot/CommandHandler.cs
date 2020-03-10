@@ -59,7 +59,14 @@ namespace DiscordBot
             statsService.SawMessage();
             Thread t = new Thread(async () =>
             {
-                await HandleCommandAsync(rawMessage);
+                try
+                {
+                    await HandleCommandAsync(rawMessage);
+                }
+                catch (System.Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
             });
             t.IsBackground = true;
             t.Start();

@@ -86,6 +86,7 @@ namespace DiscordBot
                 .AddTransient<IAudioRepo, AudioRepo>()
                 .AddTransient<InfoModule>()
                 .AddTransient<SoundModule>()
+                .AddTransient<AdminModule>()
                 .AddSingleton<StatsService>()
                 .BuildServiceProvider();
         }
