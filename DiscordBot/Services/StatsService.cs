@@ -10,6 +10,7 @@ namespace DiscordBot.Services
     public class StatsService
     {
         private DateTime startTime;
+        private ulong seenMessages;
         private ConcurrentQueue<Audio> historyQueue;
         public StatsService()
         {
@@ -19,6 +20,7 @@ namespace DiscordBot.Services
         public void Init()
         {
             startTime = DateTime.Now;
+            seenMessages = 0;
         }
 
         public TimeSpan GetUptime()
@@ -36,6 +38,16 @@ namespace DiscordBot.Services
                     break;
                 }
             }
+        }
+
+        public void SawMessage()
+        {
+            seenMessages++;
+        }
+
+        public ulong GetSeenMessages()
+        {
+            return seenMessages;
         }
 
         public List<Audio> GetHistory()

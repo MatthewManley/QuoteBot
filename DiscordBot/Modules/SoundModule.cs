@@ -22,13 +22,15 @@ namespace DiscordBot.Modules
         private readonly StatsService statsService;
         private readonly IUserRepo userRepo;
         private readonly IDiscordClient client;
+        private readonly CommandHandler commandHandler;
 
-        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo, IDiscordClient client)
+        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo, IDiscordClient client, CommandHandler commandHandler)
         {
             this.audioRepo = audioRepo;
             this.statsService = statsService;
             this.userRepo = userRepo;
             this.client = client;
+            this.commandHandler = commandHandler;
         }
 
         [MyCommand("list")]
@@ -70,7 +72,7 @@ namespace DiscordBot.Modules
         public async Task Upload(SocketCommandContext context)
         {
             var hasUploadRole = await userRepo.UserHasAnyRole(context.User.Id, "Upload");
-            var isOwner = Settings.Owner.HasValue && context.User.Id == Settings.Owner.Value;
+            var isOwner = context.IsBotOwner();
             if (!(hasUploadRole || isOwner))
             {
                 await context.Reply("no");
@@ -82,8 +84,40 @@ namespace DiscordBot.Modules
                 await context.Reply("The message must contain 1 audio attachment.");
                 return;
             }
+            int argPos = 0;
+            context.Message.HasPrefix(client.CurrentUser, ref argPos);
+            var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (commandParts.Length != 3)
+            {
+                await context.Reply("!upload category name");
+                return;
+            }
             var attachment = attachments.First();
-            var section = context.Message.Content.Split(" ")[1];
+            var category = commandParts[1].ToLower();
+            var name = commandParts[2].ToLower();
+            var validChars = "abcdefghijklmnopqrstuvwxyz0123456789-_";
+            if (category.Except(validChars).Any())
+            {
+                await context.Reply($"Invalid category, only use the following characters: {validChars}");
+                return;
+            }
+            if (name.Except(validChars).Any())
+            {
+                await context.Reply($"Invalid name, only use the following characters: {validChars}");
+                return;
+            }
+            if (commandHandler.GetCommands().Contains(category))
+            {
+                await context.Reply("Invalid command category!");
+                return;
+            }
+            var currentAudio = await audioRepo.GetAudioForCategory(category);
+            if (currentAudio.Any(x => x.Name == name))
+            {
+                await context.Reply("A quote already exists with that name");
+                return;
+            }
+
             try
             {
                 var newName = Guid.NewGuid().ToString();
@@ -95,6 +129,14 @@ namespace DiscordBot.Modules
                     await context.Reply("30 seconds maximum");
                     return;
                 }
+                var newPath = Path.Combine(Settings.AudioPath, newName);
+                File.Move(tempPath, newPath);
+                await audioRepo.AddAudio(new Audio {
+                    Category = category,
+                    Name = name,
+                    Path = newPath
+                });
+                await context.Reply($"Done, you can no do\n{Settings.Prefix}{category} {name}");
             }
             catch (Exception ex)
             {
@@ -229,6 +271,7 @@ namespace DiscordBot.Modules
                 FileName = "ffprobe",
                 Arguments = $"-show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i \"{path}\"",
                 UseShellExecute = false,
+                RedirectStandardError = true,
                 RedirectStandardOutput = true
             }))
             {

@@ -8,7 +8,7 @@ namespace DiscordBot
     {
         public MyCommand(string name, string permission = null)
         {
-            Name = name;
+            Name = name.ToLower();
             Permission = permission;
         }
 

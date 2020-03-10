@@ -15,18 +15,25 @@ using System.Threading.Tasks;
 
 namespace DiscordBot
 {
-    class CommandHandler
+    public class CommandHandler
     {
         private readonly DiscordSocketClient _client;
         private readonly IServiceProvider serviceProvider;
         private readonly IAudioRepo audioRepo;
+        private readonly StatsService statsService;
         private Dictionary<string, MethodInfo> commands = null;
 
-        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider, IAudioRepo audioRepo)
+        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider, IAudioRepo audioRepo, StatsService statsService)
         {
             this.serviceProvider = serviceProvider;
             this.audioRepo = audioRepo;
+            this.statsService = statsService;
             _client = client;
+        }
+
+        public List<string> GetCommands()
+        {
+            return commands.Keys.ToList();
         }
 
         public void InitializeAsync()
@@ -49,6 +56,7 @@ namespace DiscordBot
 
         private Task HandleCommandAsyncWrapper(SocketMessage rawMessage)
         {
+            statsService.SawMessage();
             Thread t = new Thread(async () =>
             {
                 await HandleCommandAsync(rawMessage);

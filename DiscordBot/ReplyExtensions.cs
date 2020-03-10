@@ -22,5 +22,10 @@ namespace DiscordBot
             return message.HasStringPrefix(Settings.Prefix, ref argPos) ||
                 message.HasMentionPrefix(user, ref argPos);
         }
+
+        public static bool IsBotOwner(this SocketCommandContext context)
+        {
+            return Settings.Owner.HasValue && context.User.Id == Settings.Owner.Value;
+        }
     }
 }
