@@ -131,7 +131,8 @@ namespace DiscordBot.Modules
                 }
                 var newPath = Path.Combine(Settings.AudioPath, newName);
                 File.Move(tempPath, newPath);
-                await audioRepo.AddAudio(new Audio {
+                await audioRepo.AddAudio(new Audio
+                {
                     Category = category,
                     Name = name,
                     Path = newPath
@@ -229,7 +230,10 @@ namespace DiscordBot.Modules
                 }
             }
             // Katie isn't allow to use her own voice
-            if (context.User.Id == 302955588327833622 && audio.Category == "heck")
+            if ((context.User.Id == 302955588327833622 && audio.Category == "heck") ||
+                (context.User.Id == 181537270526902272 && audio.Category == "chacons") ||
+                (context.User.Id == 336341485655949313 && audio.Category == "zach") ||
+                (context.User.Id == 218600945372758016 && audio.Category == "saxton"))
             {
                 audio = await audioRepo.GetAudio("trump", "i-dont-think-so");
             }
