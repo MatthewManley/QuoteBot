@@ -145,6 +145,28 @@ namespace DiscordBot.Modules
             }
         }
 
+        [MyCommand("random")]
+        public async Task Rnaomd(SocketCommandContext context)
+        {
+            // If the bot is already in a voice channel in the server, then don't play a quote
+            if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
+            {
+                await context.Reply("I am already doing a quote calm the fuck down.");
+                return;
+            }
+            var category = await GetRandomCategory(context.User.Id);
+            var audio = await GetRandomAudioForCategory(category);
+
+            var channel = (context.User as IGuildUser)?.VoiceChannel;
+            if (channel is null)
+            {
+                await context.Reply("You gotta be in a voice channel");
+                return;
+            }
+            statsService.AddToHistory(audio);
+            await Play(channel, audio);
+        }
+
         public async Task PlaySound(SocketCommandContext context)
         {
             // If the bot is already in a voice channel in the server, then don't play a quote
@@ -182,11 +204,6 @@ namespace DiscordBot.Modules
                 }
                 else if (part.Equals("-q") || part.Equals("--quote") || part.Equals("-f") || part.Equals("--file"))
                 {
-                    if (category == "random")
-                    {
-                        await context.Reply("You can't ask for a random quote then also ask for a specific quote.");
-                        return;
-                    }
                     if (!(quote is null))
                     {
                         await context.Reply("Don't be greedy, you only get one quote at a time.");
@@ -225,11 +242,6 @@ namespace DiscordBot.Modules
                 (context.User.Id == 155123403383242753 && category == "ted"))
             {
                 audio = await audioRepo.GetAudio("trump", "i-dont-think-so");
-            }
-            else if (category == "random")
-            {
-                category = await GetRandomCategory(context.User.Id);
-                audio = await GetRandomAudioForCategory(category);
             }
             else if (quote is null)
             {
