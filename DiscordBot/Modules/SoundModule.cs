@@ -136,7 +136,7 @@ namespace DiscordBot.Modules
                     Name = name,
                     Path = newPath
                 });
-                await context.Reply($"Done, you can no do\n{Settings.Prefix}{category} {name}");
+                await context.Reply($"Done, you can now do\n{Settings.Prefix}{category} {name}");
             }
             catch (Exception ex)
             {
