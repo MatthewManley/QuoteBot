@@ -34,6 +34,18 @@ namespace DiscordBot
                 var client = services.GetRequiredService<DiscordSocketClient>();
 
                 client.Log += Log;
+                client.Ready += async () =>
+                {
+                    var channelId = 178546341314691072UL;
+                    if (client.GetChannel(channelId) is SocketTextChannel announceChannel)
+                    {
+                        await announceChannel.SendMessageAsync("I just started up!");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Could not announce to channel {channelId}");
+                    }
+                };
 
                 var sql = services.GetRequiredService<SqliteConnection>();
                 var userRepo = services.GetRequiredService<IUserRepo>();
@@ -41,15 +53,12 @@ namespace DiscordBot
 
                 // Tokens should be considered secret data and never hard-coded.
                 // We can read from the environment variable to avoid hardcoding.
-                Console.WriteLine("test");
                 await client.LoginAsync(TokenType.Bot, Settings.BotKey);
                 await client.StartAsync();
                 services.GetRequiredService<StatsService>().Init();
 
-
                 // Here we initialize the logic required to register our commands.
                 services.GetRequiredService<CommandHandler>().InitializeAsync();
-
                 await Task.Delay(-1);
             }
         }

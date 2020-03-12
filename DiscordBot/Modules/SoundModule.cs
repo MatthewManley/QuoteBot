@@ -147,15 +147,16 @@ namespace DiscordBot.Modules
 
         public async Task PlaySound(SocketCommandContext context)
         {
+            // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
             {
-                await context.Reply("I am already doing a quote clam the fuck down.");
+                await context.Reply("I am already doing a quote calm the fuck down.");
                 return;
             }
             var argPos = 0;
             context.Message.HasPrefix(client.CurrentUser, ref argPos);
             var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var category = commandParts[0];
+            var category = commandParts[0].ToLower();
             IVoiceChannel channel = null;
             string quote = null;
             for (int i = 1; i < commandParts.Length; i++)
@@ -181,6 +182,11 @@ namespace DiscordBot.Modules
                 }
                 else if (part.Equals("-q") || part.Equals("--quote") || part.Equals("-f") || part.Equals("--file"))
                 {
+                    if (category == "random")
+                    {
+                        await context.Reply("You can't ask for a random quote then also ask for a specific quote.");
+                        return;
+                    }
                     if (!(quote is null))
                     {
                         await context.Reply("Don't be greedy, you only get one quote at a time.");
@@ -211,14 +217,23 @@ namespace DiscordBot.Modules
                 return;
             }
             Audio audio;
-            if (quote is null)
+            // Katie isn't allow to use her own voice
+            if ((context.User.Id == 302955588327833622 && category == "heck") ||
+                (context.User.Id == 181537270526902272 && category == "chacons") ||
+                (context.User.Id == 336341485655949313 && category == "zach") ||
+                (context.User.Id == 218600945372758016 && category == "saxton") ||
+                (context.User.Id == 155123403383242753 && category == "ted"))
             {
-                var playlist = await audioRepo.GetAudioForCategory(category);
-                var takeAmount = Math.Min(Settings.RecentCount, playlist.Count - 1);
-                var history = statsService.GetHistory().AsEnumerable().Reverse().Take(takeAmount);
-                var available = playlist.Except(history).ToList();
-                var index = StaticRandom.Next(available.Count);
-                audio = available[index];
+                audio = await audioRepo.GetAudio("trump", "i-dont-think-so");
+            }
+            else if (category == "random")
+            {
+                category = await GetRandomCategory(context.User.Id);
+                audio = await GetRandomAudioForCategory(category);
+            }
+            else if (quote is null)
+            {
+                audio = await GetRandomAudioForCategory(category);
             }
             else
             {
@@ -229,16 +244,45 @@ namespace DiscordBot.Modules
                     return;
                 }
             }
-            // Katie isn't allow to use her own voice
-            if ((context.User.Id == 302955588327833622 && audio.Category == "heck") ||
-                (context.User.Id == 181537270526902272 && audio.Category == "chacons") ||
-                (context.User.Id == 336341485655949313 && audio.Category == "zach") ||
-                (context.User.Id == 218600945372758016 && audio.Category == "saxton"))
-            {
-                audio = await audioRepo.GetAudio("trump", "i-dont-think-so");
-            }
             statsService.AddToHistory(audio);
             await Play(channel, audio);
+        }
+
+        private async Task<string> GetRandomCategory(ulong userId)
+        {
+            var allCategories = await audioRepo.GetCategories();
+            switch (userId)
+            {
+                case 302955588327833622:
+                    allCategories.Remove("heck");
+                    break;
+                case 181537270526902272:
+                    allCategories.Remove("chacons");
+                    break;
+                case 336341485655949313:
+                    allCategories.Remove("zach");
+                    break;
+                case 218600945372758016:
+                    allCategories.Remove("saxton");
+                    break;
+                case 155123403383242753:
+                    allCategories.Remove("ted");
+                    break;
+                default:
+                    break;
+            }
+            var index = StaticRandom.Next(allCategories.Count);
+            return allCategories[index];
+        }
+
+        private async Task<Audio> GetRandomAudioForCategory(string category)
+        {
+            var playlist = await audioRepo.GetAudioForCategory(category);
+            var takeAmount = Math.Min(Settings.RecentCount, playlist.Count - 1);
+            var history = statsService.GetHistory().AsEnumerable().Reverse().Take(takeAmount);
+            var available = playlist.Except(history).ToList();
+            var index = StaticRandom.Next(available.Count);
+            return available[index];
         }
 
         private static bool TryGetVoiceChannel(SocketCommandContext context, string argument, out IVoiceChannel voiceChannel)
