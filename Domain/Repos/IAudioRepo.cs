@@ -8,9 +8,8 @@ namespace Domain.Repos
     {
         Task AddAudio(Audio audio);
         Task<List<Audio>> GetAllAudio();
-        Task<List<Audio>> GetAudioForCategory(string category);
-        Task<List<string>> GetCategories();
+        Task<List<Audio>> GetAllAudioForCategory(string category);
+        Task<Audio> GetAudio(int id);
         Task<Audio> GetAudio(string category, string name);
-        Task RemoveAudio(string name, string category);
     }
 }

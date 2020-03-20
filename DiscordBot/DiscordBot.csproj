@@ -15,4 +15,8 @@
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Migrations/*" CopyToOutputDirectory="Always"/>
+  </ItemGroup>
+
 </Project>

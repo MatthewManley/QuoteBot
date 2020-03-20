@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domain", "Domain\Domain.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{A9D6ED9D-DF07-4E80-966F-CD9FA8EEFCAC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BulkAdd", "BulkAdd\BulkAdd.csproj", "{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{A9D6ED9D-DF07-4E80-966F-CD9FA8EEFCAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9D6ED9D-DF07-4E80-966F-CD9FA8EEFCAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A9D6ED9D-DF07-4E80-966F-CD9FA8EEFCAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

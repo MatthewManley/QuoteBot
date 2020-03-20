@@ -21,13 +21,15 @@ namespace DiscordBot
         private readonly IServiceProvider serviceProvider;
         private readonly IAudioRepo audioRepo;
         private readonly StatsService statsService;
+        private readonly ICategoryRepo categoryRepo;
         private Dictionary<string, MethodInfo> commands = null;
 
-        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider, IAudioRepo audioRepo, StatsService statsService)
+        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider, IAudioRepo audioRepo, StatsService statsService, ICategoryRepo categoryRepo)
         {
             this.serviceProvider = serviceProvider;
             this.audioRepo = audioRepo;
             this.statsService = statsService;
+            this.categoryRepo = categoryRepo;
             _client = client;
         }
 
@@ -87,7 +89,7 @@ namespace DiscordBot
             if (!message.HasPrefix(_client.CurrentUser, ref argPos))
                 return;
 
-            var command = message.Content.Substring(argPos).Split(' ')[0].ToLower();
+            var command = message.Content.Substring(argPos).Split(' ')[0].ToLowerInvariant();
 
             var context = new SocketCommandContext(_client, message);
             if (commands.TryGetValue(command, out var method))
@@ -97,8 +99,8 @@ namespace DiscordBot
                 return;
             }
 
-            var categories = await audioRepo.GetCategories();
-            if (categories.Contains(command))
+            var categories = await categoryRepo.GetAllCategoriesWithAudio();
+            if (categories.Select(x => x.Name).Contains(command))
             {
                 var soundMod = serviceProvider.GetRequiredService<SoundModule>();
                 await soundMod.PlaySound(context);
