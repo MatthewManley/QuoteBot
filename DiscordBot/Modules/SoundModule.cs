@@ -23,14 +23,16 @@ namespace DiscordBot.Modules
         private readonly IUserRepo userRepo;
         private readonly IDiscordClient client;
         private readonly CommandHandler commandHandler;
+        private readonly ICategoryRepo categoryRepo;
 
-        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo, IDiscordClient client, CommandHandler commandHandler)
+        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo, IDiscordClient client, CommandHandler commandHandler, ICategoryRepo categoryRepo)
         {
             this.audioRepo = audioRepo;
             this.statsService = statsService;
             this.userRepo = userRepo;
             this.client = client;
             this.commandHandler = commandHandler;
+            this.categoryRepo = categoryRepo;
         }
 
         [MyCommand("list")]
@@ -43,12 +45,12 @@ namespace DiscordBot.Modules
             }
             if (parts.Length == 1)
             {
-                var categories = await audioRepo.GetCategories();
-                await context.Reply(string.Join("\n", categories.Select(x => $"!{x}")));
+                var categories = await categoryRepo.GetAllCategoriesWithAudio();
+                await context.Reply(string.Join("\n", categories.Select(x => $"{Settings.Prefix}{x.Name}")));
             }
             else if (parts.Length == 2)
             {
-                var sounds = await audioRepo.GetAudioForCategory(parts[1]);
+                var sounds = await audioRepo.GetAllAudioForCategory(parts[1]);
                 if (sounds.Count == 0)
                 {
                     await context.Reply("No sounds found for that category.");
@@ -63,9 +65,9 @@ namespace DiscordBot.Modules
         [MyCommand("history")]
         public async Task History(SocketCommandContext context)
         {
-            var history = statsService.GetHistory();
+            var history = statsService.GetHistory(context.Guild.Id);
             history.Reverse();
-            await context.Reply(string.Join("\n", history.Select(x => $"!{x.Category} {x.Name}")));
+            await context.Reply(string.Join("\n", history.Select(x => $"!{x.Item1.Name} {x.Item2.Name}")));
         }
 
         [MyCommand("upload")]
@@ -111,7 +113,7 @@ namespace DiscordBot.Modules
                 await context.Reply("Invalid command category!");
                 return;
             }
-            var currentAudio = await audioRepo.GetAudioForCategory(category);
+            var currentAudio = await audioRepo.GetAllAudioForCategory(category);
             if (currentAudio.Any(x => x.Name == name))
             {
                 await context.Reply("A quote already exists with that name");
@@ -133,9 +135,8 @@ namespace DiscordBot.Modules
                 File.Move(tempPath, newPath);
                 await audioRepo.AddAudio(new Audio
                 {
-                    Category = category,
                     Name = name,
-                    Path = newPath
+                    Path = newName
                 });
                 await context.Reply($"Done, you can now do\n{Settings.Prefix}{category} {name}");
             }
@@ -155,7 +156,7 @@ namespace DiscordBot.Modules
                 return;
             }
             var category = await GetRandomCategory(context.User.Id);
-            var audio = await GetRandomAudioForCategory(category);
+            var audio = await GetRandomAudioForCategory(context.Guild.Id, category);
 
             var channel = (context.User as IGuildUser)?.VoiceChannel;
             if (channel is null)
@@ -163,7 +164,7 @@ namespace DiscordBot.Modules
                 await context.Reply("You gotta be in a voice channel");
                 return;
             }
-            statsService.AddToHistory(audio);
+            statsService.AddToHistory(context.Guild.Id, category, audio);
             await Play(channel, audio);
         }
 
@@ -178,9 +179,9 @@ namespace DiscordBot.Modules
             var argPos = 0;
             context.Message.HasPrefix(client.CurrentUser, ref argPos);
             var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var category = commandParts[0].ToLower();
+            var msgCategory = commandParts[0].ToLower();
             IVoiceChannel channel = null;
-            string quote = null;
+            string msgQuote = null;
             for (int i = 1; i < commandParts.Length; i++)
             {
                 var part = commandParts[i].ToLower();
@@ -204,7 +205,7 @@ namespace DiscordBot.Modules
                 }
                 else if (part.Equals("-q") || part.Equals("--quote") || part.Equals("-f") || part.Equals("--file"))
                 {
-                    if (!(quote is null))
+                    if (!(msgQuote is null))
                     {
                         await context.Reply("Don't be greedy, you only get one quote at a time.");
                         return;
@@ -215,11 +216,11 @@ namespace DiscordBot.Modules
                         return;
                     }
                     i++;
-                    quote = commandParts[i].ToLower();
+                    msgQuote = commandParts[i].ToLower();
                 }
-                else if (quote is null)
+                else if (msgQuote is null)
                 {
-                    quote = part;
+                    msgQuote = part;
                 }
                 else
                 {
@@ -234,51 +235,56 @@ namespace DiscordBot.Modules
                 return;
             }
             Audio audio;
+            Category category;
             // Katie isn't allow to use her own voice
-            if ((context.User.Id == 302955588327833622 && category == "heck") ||
-                (context.User.Id == 181537270526902272 && category == "chacons") ||
-                (context.User.Id == 336341485655949313 && category == "zach") ||
-                (context.User.Id == 218600945372758016 && category == "saxton") ||
-                (context.User.Id == 155123403383242753 && category == "ted"))
+            if ((context.User.Id == 302955588327833622 && msgCategory == "heck") ||
+                (context.User.Id == 181537270526902272 && msgCategory == "chacons") ||
+                (context.User.Id == 336341485655949313 && msgCategory == "zach") ||
+                (context.User.Id == 218600945372758016 && msgCategory == "saxton") ||
+                (context.User.Id == 155123403383242753 && msgCategory == "ted"))
             {
+                category = await categoryRepo.GetCategoryByName("trump");
                 audio = await audioRepo.GetAudio("trump", "i-dont-think-so");
             }
-            else if (quote is null)
+            else if (msgQuote is null)
             {
-                audio = await GetRandomAudioForCategory(category);
+                category = await categoryRepo.GetCategoryByName(msgCategory);
+                audio = await GetRandomAudioForCategory(context.Guild.Id, category);
             }
             else
             {
-                audio = await audioRepo.GetAudio(category, quote);
+                category = await categoryRepo.GetCategoryByName(msgCategory);
+                audio = await audioRepo.GetAudio(msgCategory, msgQuote);
                 if (audio is null)
                 {
                     await context.Reply("That quote don't exist...");
                     return;
                 }
             }
-            statsService.AddToHistory(audio);
+            statsService.AddToHistory(context.Guild.Id, category, audio);
+            Console.WriteLine($"Playing {audio.Name}: {audio.Path}");
             await Play(channel, audio);
         }
 
-        private async Task<string> GetRandomCategory(ulong userId)
+        private async Task<Category> GetRandomCategory(ulong userId)
         {
-            var allCategories = await audioRepo.GetCategories();
+            var allCategories = await categoryRepo.GetAllCategoriesWithAudio();
             switch (userId)
             {
                 case 302955588327833622:
-                    allCategories.Remove("heck");
+                    allCategories.RemoveAll(x => x.Name == "hexk");
                     break;
                 case 181537270526902272:
-                    allCategories.Remove("chacons");
+                    allCategories.RemoveAll(x => x.Name == "chacons");
                     break;
                 case 336341485655949313:
-                    allCategories.Remove("zach");
+                    allCategories.RemoveAll(x => x.Name == "zach");
                     break;
                 case 218600945372758016:
-                    allCategories.Remove("saxton");
+                    allCategories.RemoveAll(x => x.Name == "saxton");
                     break;
                 case 155123403383242753:
-                    allCategories.Remove("ted");
+                    allCategories.RemoveAll(x => x.Name == "ted");
                     break;
                 default:
                     break;
@@ -287,11 +293,11 @@ namespace DiscordBot.Modules
             return allCategories[index];
         }
 
-        private async Task<Audio> GetRandomAudioForCategory(string category)
+        private async Task<Audio> GetRandomAudioForCategory(ulong serverId, Category category)
         {
-            var playlist = await audioRepo.GetAudioForCategory(category);
-            var takeAmount = Math.Min(Settings.RecentCount, playlist.Count - 1);
-            var history = statsService.GetHistory().AsEnumerable().Reverse().Take(takeAmount);
+            var playlist = await audioRepo.GetAllAudioForCategory(category.Id);
+            var takeAmount = Math.Max(1, Math.Min(Settings.RecentCount, playlist.Count - 2));
+            var history = statsService.GetHistory(serverId).AsEnumerable().Reverse().Take(takeAmount).Select(x => x.Item2);
             var available = playlist.Except(history).ToList();
             var index = StaticRandom.Next(available.Count);
             return available[index];
@@ -343,6 +349,11 @@ namespace DiscordBot.Modules
         private async Task Play(IVoiceChannel vc, Audio audio)
         {
             var path = Path.Combine(Settings.AudioPath, audio.Path);
+            if (!File.Exists(path))
+            {
+                Console.WriteLine("That file did not exist!!!!!");
+                return;
+            }
             var audioClient = await vc.ConnectAsync();
             using (var ffmpeg = CreateStream(path))
             using (var output = ffmpeg.StandardOutput.BaseStream)
