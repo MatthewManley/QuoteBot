@@ -18,7 +18,7 @@ namespace Infrastructure
             this.connection = connection;
         }
 
-        public async Task<List<Audio>> GetAllAudioForCategory(string category)
+        public async Task<List<Audio>> GetAllAudioForCategory(string categoryName)
         {
             await connection.OpenAsync();
             using var cmd = connection.CreateCommand();
@@ -29,7 +29,32 @@ namespace Infrastructure
                 "WHERE category.name = $category;";
 
             // Parameterizing input to prevent sql injection
-            cmd.AddParameterWithValue("$category", category.ToLowerInvariant());
+            cmd.AddParameterWithValue("$category", categoryName.ToLowerInvariant());
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            var enumerable = reader.ReadToEnumerable(() => new Audio
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                Path = reader.GetString(2)
+            });
+            var result = await enumerable.ToListAsync();
+            await connection.CloseAsync();
+            return result;
+        }
+
+        public async Task<List<Audio>> GetAllAudioForCategory(int categoryId)
+        {
+            await connection.OpenAsync();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText =
+                "SELECT audio.id, audio.name, audio.path FROM audio " +
+                "INNER JOIN audio_category on audio.id = audio_category.audio " +
+                "INNER JOIN category on audio_category.category = category.id " +
+                "WHERE category.id = $id;";
+
+            // Parameterizing input to prevent sql injection
+            cmd.AddParameterWithValue("$id", categoryId);
 
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new Audio
