@@ -4,29 +4,33 @@ using System.Text;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using DiscordBot.Options;
+using Microsoft.Extensions.Options;
 
 namespace DiscordBot.Modules
 {
     public class AdminModule : MyCommandSet
     {
         private readonly IDiscordClient discordClient;
+        private readonly BotOptions botOptions;
 
-        public AdminModule(IDiscordClient discordClient)
+        public AdminModule(IDiscordClient discordClient, IOptions<BotOptions> botOptions)
         {
             this.discordClient = discordClient;
+            this.botOptions = botOptions.Value;
         }
         
         [MyCommand("listservers")]
         public async Task ListServers(SocketCommandContext context)
         {
-            if (!context.IsBotOwner())
+            if (!context.IsBotOwner(botOptions.OwnerValue))
             {
                 await context.Reply("no");
                 return;
             }
             var guilds = await discordClient.GetGuildsAsync();
             int argPos = 0;
-            context.Message.HasPrefix(discordClient.CurrentUser, ref argPos);
+            context.Message.HasPrefix(botOptions.Prefix, discordClient.CurrentUser, ref argPos);
             var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (commandParts.Length != 1 && commandParts.Length != 2)
             {

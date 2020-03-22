@@ -2,14 +2,15 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using DiscordBot.Modules;
+using DiscordBot.Options;
 using DiscordBot.Services;
 using Domain.Repos;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,14 +23,22 @@ namespace DiscordBot
         private readonly IAudioRepo audioRepo;
         private readonly StatsService statsService;
         private readonly ICategoryRepo categoryRepo;
+        private readonly BotOptions botOptions;
         private Dictionary<string, MethodInfo> commands = null;
 
-        public CommandHandler(DiscordSocketClient client, IServiceProvider serviceProvider, IAudioRepo audioRepo, StatsService statsService, ICategoryRepo categoryRepo)
+        public CommandHandler(
+            DiscordSocketClient client,
+            IServiceProvider serviceProvider,
+            IAudioRepo audioRepo,
+            StatsService statsService,
+            ICategoryRepo categoryRepo,
+            IOptions<BotOptions> botOptions)
         {
             this.serviceProvider = serviceProvider;
             this.audioRepo = audioRepo;
             this.statsService = statsService;
             this.categoryRepo = categoryRepo;
+            this.botOptions = botOptions.Value;
             _client = client;
         }
 
@@ -86,7 +95,7 @@ namespace DiscordBot
 
             int argPos = 0;
             // Determine if the message is a command based on the prefix and make sure no bots trigger commands
-            if (!message.HasPrefix(_client.CurrentUser, ref argPos))
+            if (!message.HasPrefix(botOptions.Prefix, _client.CurrentUser, ref argPos))
                 return;
 
             var command = message.Content.Substring(argPos).Split(' ')[0].ToLowerInvariant();

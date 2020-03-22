@@ -2,11 +2,14 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using DiscordBot.Modules;
+using DiscordBot.Options;
 using DiscordBot.Services;
 using Domain.Repos;
 using Infrastructure;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -17,7 +20,8 @@ using System.Threading.Tasks;
 namespace DiscordBot
 {
     public class Program
-    {        
+    {
+        public IConfiguration Configuration;
         public static async Task Main(string[] args)
         {
             await new Program().Run(args);
@@ -25,48 +29,21 @@ namespace DiscordBot
 
         public async Task Run(string[] args)
         {
-            var missingSettings = Settings.MissingSettings().ToList();
-            if (missingSettings.Count > 0)
-            {
-                Console.WriteLine("Missing required environment variables: ");
-                Console.WriteLine(string.Join(", ", missingSettings));
-                return;
-            }
-            using (var services = ConfigureServices())
-            {
-                var client = services.GetRequiredService<DiscordSocketClient>();
+            var builder = new ConfigurationBuilder()
+                .AddEnvironmentVariables();
+            Configuration = builder.Build();
 
-                client.Log += Log;
-                client.Ready += async () =>
-                {
-                    var channelId = 178546341314691072UL;
-                    if (client.GetChannel(channelId) is SocketTextChannel announceChannel)
-                    {
-                        await announceChannel.SendMessageAsync("I just started up!");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Could not announce to channel {channelId}");
-                    }
-                };
+            using var services = ConfigureServices();
 
-                var sql = services.GetRequiredService<DbConnection>();
-                var userRepo = services.GetRequiredService<IUserRepo>();
-                await BuildDb(sql, userRepo);
+            var sql = services.GetRequiredService<DbConnection>();
+            await BuildDb(sql);
 
-                // Tokens should be considered secret data and never hard-coded.
-                // We can read from the environment variable to avoid hardcoding.
-                await client.LoginAsync(TokenType.Bot, Settings.BotKey);
-                await client.StartAsync();
-                services.GetRequiredService<StatsService>().Init();
-
-                // // Here we initialize the logic required to register our commands.
-                services.GetRequiredService<CommandHandler>().InitializeAsync();
-                await Task.Delay(-1);
-            }
+            // Start the bot
+            await services.GetRequiredService<Bot>().Run();
+            await Task.Delay(-1);
         }
 
-        private async Task BuildDb(DbConnection connection, IUserRepo userRepo)
+        private async Task BuildDb(DbConnection connection)
         {
             await connection.OpenAsync();
 
@@ -86,18 +63,18 @@ namespace DiscordBot
                 Console.WriteLine($"Performing Migration: {version}");
                 using var reader = file.OpenText();
                 var content = await reader.ReadToEndAsync();
-                
+
                 var migrationCmd = connection.CreateCommand();
                 migrationCmd.CommandText = content;
                 await migrationCmd.ExecuteNonQueryAsync();
                 Console.WriteLine($"Performed Migration: {version}");
             }
-            
+
             await connection.CloseAsync();
         }
 
         private IEnumerable<(long, FileInfo)> GetMigrations()
-        {            
+        {
             var migrationsDirectory = new DirectoryInfo("Migrations");
             if (!migrationsDirectory.Exists)
             {
@@ -116,19 +93,16 @@ namespace DiscordBot
                 yield return (num, file);
             }
         }
-        
-
-        private Task Log(LogMessage msg)
-        {
-            Console.WriteLine(msg.ToString());
-            return Task.CompletedTask;
-        }
 
         private ServiceProvider ConfigureServices()
         {
             return new ServiceCollection()
+                .AddDefaultAWSOptions(Configuration.GetAWSOptions())
+                .Configure<AuthOptions>(Configuration.GetSection("Auth"))
+                .Configure<BotOptions>(Configuration.GetSection("Bot"))
                 .AddSingleton<DiscordSocketClient>()
                 .AddTransient<IDiscordClient>(x => x.GetRequiredService<DiscordSocketClient>())
+                .AddSingleton<Bot>()
                 .AddSingleton<CommandHandler>()
                 .AddTransient<DbConnection>(BuildSqliteConnection)
                 .AddTransient<IUserRepo, UserRepo>()
@@ -138,13 +112,14 @@ namespace DiscordBot
                 .AddTransient<SoundModule>()
                 .AddTransient<AdminModule>()
                 .AddSingleton<StatsService>()
+                .AddAWSService<Amazon.S3.IAmazonS3>()
                 .BuildServiceProvider();
         }
 
         private SqliteConnection BuildSqliteConnection(IServiceProvider serviceProvider)
         {
             var connectionStringBuilder = new SqliteConnectionStringBuilder();
-            connectionStringBuilder.DataSource = Environment.GetEnvironmentVariable("db_path");
+            connectionStringBuilder.DataSource = serviceProvider.GetRequiredService<IOptions<BotOptions>>().Value.DatabasePath;
             return new SqliteConnection(connectionStringBuilder.ConnectionString);
         }
     }

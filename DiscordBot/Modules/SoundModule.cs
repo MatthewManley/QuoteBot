@@ -1,9 +1,12 @@
-﻿using Discord;
+﻿using Amazon.S3;
+using Discord;
 using Discord.Audio;
 using Discord.Commands;
+using DiscordBot.Options;
 using DiscordBot.Services;
 using Domain.Models;
 using Domain.Repos;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -24,8 +27,18 @@ namespace DiscordBot.Modules
         private readonly IDiscordClient client;
         private readonly CommandHandler commandHandler;
         private readonly ICategoryRepo categoryRepo;
+        private readonly IAmazonS3 s3Client;
+        private readonly BotOptions botOptions;
 
-        public SoundModule(IAudioRepo audioRepo, StatsService statsService, IUserRepo userRepo, IDiscordClient client, CommandHandler commandHandler, ICategoryRepo categoryRepo)
+        public SoundModule(
+            IAudioRepo audioRepo,
+            StatsService statsService,
+            IUserRepo userRepo,
+            IDiscordClient client,
+            CommandHandler commandHandler,
+            ICategoryRepo categoryRepo,
+            IAmazonS3 s3Client,
+            IOptions<BotOptions> botOptions)
         {
             this.audioRepo = audioRepo;
             this.statsService = statsService;
@@ -33,6 +46,8 @@ namespace DiscordBot.Modules
             this.client = client;
             this.commandHandler = commandHandler;
             this.categoryRepo = categoryRepo;
+            this.s3Client = s3Client;
+            this.botOptions = botOptions.Value;
         }
 
         [MyCommand("list")]
@@ -46,7 +61,7 @@ namespace DiscordBot.Modules
             if (parts.Length == 1)
             {
                 var categories = await categoryRepo.GetAllCategoriesWithAudio();
-                await context.Reply(string.Join("\n", categories.Select(x => $"{Settings.Prefix}{x.Name}")));
+                await context.Reply(string.Join("\n", categories.Select(x => $"{botOptions.Prefix}{x.Name}")));
             }
             else if (parts.Length == 2)
             {
@@ -69,82 +84,83 @@ namespace DiscordBot.Modules
             history.Reverse();
             await context.Reply(string.Join("\n", history.Select(x => $"!{x.Item1.Name} {x.Item2.Name}")));
         }
+        
+        //TODO: Setup with s3
+        // [MyCommand("upload")]
+        // public async Task Upload(SocketCommandContext context)
+        // {
+        //     var hasUploadRole = await userRepo.UserHasAnyRole(context.User.Id, "Upload");
+        //     var isOwner = context.IsBotOwner();
+        //     if (!(hasUploadRole || isOwner))
+        //     {
+        //         await context.Reply("no");
+        //         return;
+        //     }
+        //     var attachments = context.Message.Attachments;
+        //     if (attachments.Count != 1)
+        //     {
+        //         await context.Reply("The message must contain 1 audio attachment.");
+        //         return;
+        //     }
+        //     int argPos = 0;
+        //     context.Message.HasPrefix(client.CurrentUser, ref argPos);
+        //     var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        //     if (commandParts.Length != 3)
+        //     {
+        //         await context.Reply("!upload category name");
+        //         return;
+        //     }
+        //     var attachment = attachments.First();
+        //     var category = commandParts[1].ToLower();
+        //     var name = commandParts[2].ToLower();
+        //     var validChars = "abcdefghijklmnopqrstuvwxyz0123456789-_";
+        //     if (category.Except(validChars).Any())
+        //     {
+        //         await context.Reply($"Invalid category, only use the following characters: {validChars}");
+        //         return;
+        //     }
+        //     if (name.Except(validChars).Any())
+        //     {
+        //         await context.Reply($"Invalid name, only use the following characters: {validChars}");
+        //         return;
+        //     }
+        //     if (commandHandler.GetCommands().Contains(category))
+        //     {
+        //         await context.Reply("Invalid command category!");
+        //         return;
+        //     }
+        //     var currentAudio = await audioRepo.GetAllAudioForCategory(category);
+        //     if (currentAudio.Any(x => x.Name == name))
+        //     {
+        //         await context.Reply("A quote already exists with that name");
+        //         return;
+        //     }
 
-        [MyCommand("upload")]
-        public async Task Upload(SocketCommandContext context)
-        {
-            var hasUploadRole = await userRepo.UserHasAnyRole(context.User.Id, "Upload");
-            var isOwner = context.IsBotOwner();
-            if (!(hasUploadRole || isOwner))
-            {
-                await context.Reply("no");
-                return;
-            }
-            var attachments = context.Message.Attachments;
-            if (attachments.Count != 1)
-            {
-                await context.Reply("The message must contain 1 audio attachment.");
-                return;
-            }
-            int argPos = 0;
-            context.Message.HasPrefix(client.CurrentUser, ref argPos);
-            var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (commandParts.Length != 3)
-            {
-                await context.Reply("!upload category name");
-                return;
-            }
-            var attachment = attachments.First();
-            var category = commandParts[1].ToLower();
-            var name = commandParts[2].ToLower();
-            var validChars = "abcdefghijklmnopqrstuvwxyz0123456789-_";
-            if (category.Except(validChars).Any())
-            {
-                await context.Reply($"Invalid category, only use the following characters: {validChars}");
-                return;
-            }
-            if (name.Except(validChars).Any())
-            {
-                await context.Reply($"Invalid name, only use the following characters: {validChars}");
-                return;
-            }
-            if (commandHandler.GetCommands().Contains(category))
-            {
-                await context.Reply("Invalid command category!");
-                return;
-            }
-            var currentAudio = await audioRepo.GetAllAudioForCategory(category);
-            if (currentAudio.Any(x => x.Name == name))
-            {
-                await context.Reply("A quote already exists with that name");
-                return;
-            }
-
-            try
-            {
-                var newName = Guid.NewGuid().ToString();
-                var tempPath = Path.Combine(Settings.TempPath, newName);
-                new WebClient().DownloadFile(attachment.Url, tempPath);
-                var duration = await GetDuration(tempPath);
-                if (duration > 30)
-                {
-                    await context.Reply("30 seconds maximum");
-                    return;
-                }
-                var newPath = Path.Combine(Settings.AudioPath, newName);
-                File.Move(tempPath, newPath);
-                await audioRepo.AddAudio(new Audio
-                {
-                    Name = name,
-                    Path = newName
-                });
-                await context.Reply($"Done, you can now do\n{Settings.Prefix}{category} {name}");
-            }
-            catch (Exception ex)
-            {
-                await context.Reply("Something went wrong. Are you sure thats an audio file?");
-            }
-        }
+        //     try
+        //     {
+        //         var newName = Guid.NewGuid().ToString();
+        //         var tempPath = Path.Combine(botOptions.TempPath, newName);
+        //         new WebClient().DownloadFile(attachment.Url, tempPath);
+        //         var duration = await GetDuration(tempPath);
+        //         if (duration > 30)
+        //         {
+        //             await context.Reply("30 seconds maximum");
+        //             return;
+        //         }
+        //         var newPath = Path.Combine(botOptions.AudioPath, newName);
+        //         File.Move(tempPath, newPath);
+        //         await audioRepo.AddAudio(new Audio
+        //         {
+        //             Name = name,
+        //             Path = newName
+        //         });
+        //         await context.Reply($"Done, you can now do\n{botOptions.Prefix}{category} {name}");
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         await context.Reply("Something went wrong. Are you sure thats an audio file?");
+        //     }
+        // }
 
         [MyCommand("random")]
         public async Task Rnaomd(SocketCommandContext context)
@@ -177,7 +193,7 @@ namespace DiscordBot.Modules
                 return;
             }
             var argPos = 0;
-            context.Message.HasPrefix(client.CurrentUser, ref argPos);
+            context.Message.HasPrefix(botOptions.Prefix, client.CurrentUser, ref argPos);
             var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var msgCategory = commandParts[0].ToLower();
             IVoiceChannel channel = null;
@@ -296,7 +312,7 @@ namespace DiscordBot.Modules
         private async Task<Audio> GetRandomAudioForCategory(ulong serverId, Category category)
         {
             var playlist = await audioRepo.GetAllAudioForCategory(category.Id);
-            var takeAmount = Math.Max(1, Math.Min(Settings.RecentCount, playlist.Count - 2));
+            var takeAmount = Math.Max(1, Math.Min(botOptions.RecentCountValue, playlist.Count - 2));
             var history = statsService.GetHistory(serverId).AsEnumerable().Reverse().Take(takeAmount).Select(x => x.Item2);
             var available = playlist.Except(history).ToList();
             var index = StaticRandom.Next(available.Count);
@@ -318,15 +334,15 @@ namespace DiscordBot.Modules
 
         }
 
-        private static Process CreateStream(string path)
+        private static Process CreateStream()
         {
             return Process.Start(new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -af \"adelay=50|50\" -ac 2 -f s16le -ar 48000 pipe:1",
+                Arguments = $"-hide_banner -loglevel panic -i pipe:0 -af \"adelay=50|50\" -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardInput = true
             });
         }
 
@@ -348,21 +364,19 @@ namespace DiscordBot.Modules
 
         private async Task Play(IVoiceChannel vc, Audio audio)
         {
-            var path = Path.Combine(Settings.AudioPath, audio.Path);
-            if (!File.Exists(path))
-            {
-                Console.WriteLine("That file did not exist!!!!!");
-                return;
-            }
+            var s3object = await s3Client.GetObjectAsync("quotebot-audio", audio.Path);
             var audioClient = await vc.ConnectAsync();
-            using (var ffmpeg = CreateStream(path))
+            using (var ffmpeg = CreateStream())
             using (var output = ffmpeg.StandardOutput.BaseStream)
-            using (var error = ffmpeg.StandardError)
             using (var discord = audioClient.CreatePCMStream(AudioApplication.Voice, bufferMillis: 1))
             using (var memStream = new MemoryStream())
             {
                 try
-                {
+                {   
+                    using (var input = ffmpeg.StandardInput.BaseStream)
+                    {
+                        await s3object.ResponseStream.CopyToAsync(input);
+                    }
                     await output.CopyToAsync(discord);
                 }
                 finally

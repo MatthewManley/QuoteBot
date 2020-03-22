@@ -6,8 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.101" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.110.38" />
     <PackageReference Include="Discord.Net" Version="2.1.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="3.1.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Migrations/*" CopyToOutputDirectory="Always"/>
+    <None Update="Migrations/*" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>
