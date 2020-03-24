@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "buildDiscordBot",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -14,25 +14,24 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "bulkAddBuild",
             "command": "dotnet",
             "type": "process",
-            "args": [
-                "publish",
-                "${workspaceFolder}/DiscordBot/DiscordBot.csproj",
+            "args": [ 
+                "build",
+                "${workspaceFolder}/BulkAdd/BulkAdd.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "watch",
+            "label": "buildInternalApi",
             "command": "dotnet",
             "type": "process",
             "args": [
-                "watch",
-                "run",
-                "${workspaceFolder}/DiscordBot/DiscordBot.csproj",
+                "build",
+                "${workspaceFolder}/WebApi/WebApi.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

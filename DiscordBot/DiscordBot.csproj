@@ -1,28 +1,27 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>1750a6fd-f35e-47a9-a47b-85842fffd812</UserSecretsId>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.101" />
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.38" />
     <PackageReference Include="Discord.Net" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.2" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="3.1.3" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="Migrations/*" CopyToOutputDirectory="Always" />
   </ItemGroup>
-
 </Project>

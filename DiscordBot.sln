@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Infrastructure", "Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BulkAdd", "BulkAdd\BulkAdd.csproj", "{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApi", "WebApi\WebApi.csproj", "{F60B9468-A0C9-4B9D-8CFF-A64A59434F3B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D1A12E4-FCF2-49C1-B1A3-399C6FD7E13B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F60B9468-A0C9-4B9D-8CFF-A64A59434F3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F60B9468-A0C9-4B9D-8CFF-A64A59434F3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F60B9468-A0C9-4B9D-8CFF-A64A59434F3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F60B9468-A0C9-4B9D-8CFF-A64A59434F3B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

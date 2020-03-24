@@ -84,7 +84,7 @@ namespace DiscordBot.Modules
             history.Reverse();
             await context.Reply(string.Join("\n", history.Select(x => $"!{x.Item1.Name} {x.Item2.Name}")));
         }
-        
+
         //TODO: Setup with s3
         // [MyCommand("upload")]
         // public async Task Upload(SocketCommandContext context)
@@ -339,7 +339,7 @@ namespace DiscordBot.Modules
             return Process.Start(new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-hide_banner -loglevel panic -i pipe:0 -af \"adelay=50|50\" -ac 2 -f s16le -ar 48000 pipe:1",
+                Arguments = $"-hide_banner -loglevel panic -f mp3 -i pipe:0 -af \"adelay=50|50\" -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardInput = true
@@ -364,26 +364,29 @@ namespace DiscordBot.Modules
 
         private async Task Play(IVoiceChannel vc, Audio audio)
         {
-            var s3object = await s3Client.GetObjectAsync("quotebot-audio", audio.Path);
-            var audioClient = await vc.ConnectAsync();
             using (var ffmpeg = CreateStream())
             using (var output = ffmpeg.StandardOutput.BaseStream)
-            using (var discord = audioClient.CreatePCMStream(AudioApplication.Voice, bufferMillis: 1))
-            using (var memStream = new MemoryStream())
+            using (var audioClient = await vc.ConnectAsync())
+            using (var discord = audioClient.CreatePCMStream(AudioApplication.Mixed, bufferMillis: 1))
             {
-                try
-                {   
+                var inputTask = Task.Run(async () =>
+                {
+                    using (var s3object = await s3Client.GetObjectAsync("quotebot-audio", audio.Path))
                     using (var input = ffmpeg.StandardInput.BaseStream)
                     {
                         await s3object.ResponseStream.CopyToAsync(input);
                     }
+                });
+        
+                try
+                {
                     await output.CopyToAsync(discord);
+                    await inputTask;
                 }
                 finally
                 {
                     await discord.FlushAsync();
                 }
-
             }
             await vc.DisconnectAsync();
         }
