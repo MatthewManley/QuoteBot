@@ -12,7 +12,7 @@ namespace DiscordBot.Services
         private DateTime startTime;
         private ulong seenMessages;
         // private ConcurrentQueue<Audio> historyQueue;
-        private ConcurrentDictionary<ulong, ConcurrentQueue<(Category, Audio)>> serverHistories = new ConcurrentDictionary<ulong, ConcurrentQueue<(Category, Audio)>>();
+        private ConcurrentDictionary<ulong, ConcurrentQueue<HistoryEntry>> serverHistories = new ConcurrentDictionary<ulong, ConcurrentQueue<HistoryEntry>>();
 
         public void Init()
         {
@@ -25,10 +25,10 @@ namespace DiscordBot.Services
             return DateTime.Now - startTime;
         }
 
-        public void AddToHistory(ulong serverId, Category category, Audio audio)
+        public void AddToHistory(ulong serverId, HistoryEntry entry)
         {
-            var historyQueue = serverHistories.GetOrAdd(serverId, _ => new ConcurrentQueue<(Category, Audio)>());
-            historyQueue.Enqueue((category, audio));
+            var historyQueue = serverHistories.GetOrAdd(serverId, _ => new ConcurrentQueue<HistoryEntry>());
+            historyQueue.Enqueue(entry);
             while (historyQueue.Count > 5)
             {
                 if (!historyQueue.TryDequeue(out var _))
@@ -48,13 +48,13 @@ namespace DiscordBot.Services
             return seenMessages;
         }
 
-        public List<(Category, Audio)> GetHistory(ulong serverId)
+        public List<HistoryEntry> GetHistory(ulong serverId)
         {
             if( serverHistories.TryGetValue(serverId, out var queue))
             {
-                return queue.ToList();
+                return queue.AsEnumerable().Reverse().ToList();
             }
-            return new List<(Category, Audio)>();
+            return new List<HistoryEntry>();
         }
     }
 }

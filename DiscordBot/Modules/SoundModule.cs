@@ -86,7 +86,7 @@ namespace DiscordBot.Modules
 
         private async Task ListAudioForCategory(SocketCommandContext context, string category, int page)
         {
-            var sounds = await audioRepo.GetAllAudioForCategory(category);
+            var sounds = await audioRepo.GetAudioForCategory(context.Guild.Id, category.ToLowerInvariant());
             if (sounds.Count == 0)
             {
                 await context.Reply("No sounds found for that category.");
@@ -103,7 +103,7 @@ namespace DiscordBot.Modules
                 await context.Reply(errorMsg);
                 return;
             }
-            IEnumerable<Audio> display = sounds.OrderBy(x => x.Name);
+            IEnumerable<NamedAudio> display = sounds.OrderBy(x => x.AudioOwner.Name);
             var msg = new StringBuilder();
             msg.Append("Total Quotes: ");
             msg.Append(sounds.Count);
@@ -121,7 +121,7 @@ namespace DiscordBot.Modules
             msg.AppendLine();
             foreach (var sound in display)
             {
-                msg.Append(sound.Name);
+                msg.Append(sound.AudioOwner.Name);
                 msg.AppendLine();
             }
             await context.Reply(msg.ToString());
@@ -129,7 +129,7 @@ namespace DiscordBot.Modules
 
         private async Task ListCategories(SocketCommandContext context, int page)
         {
-            var categories = await categoryRepo.GetAllCategoriesWithAudio();
+            var categories = await categoryRepo.GetCategoriesWithAudio(context.Guild.Id);
             var pageMinusOne = page - 1;
             const int categoriesPerPage = 30;
             var pages = categories.Count / categoriesPerPage;
@@ -174,8 +174,7 @@ namespace DiscordBot.Modules
         public async Task History(SocketCommandContext context)
         {
             var history = statsService.GetHistory(context.Guild.Id);
-            history.Reverse();
-            await context.Reply(string.Join("\n", history.Select(x => $"!{x.Item1.Name} {x.Item2.Name}")));
+            await context.Reply(string.Join("\n", history.Select(x => $"{x.Category.Name} {x.NamedAudio.AudioOwner.Name}")));
         }
 
         [MyCommand("random")]
@@ -188,7 +187,7 @@ namespace DiscordBot.Modules
                 return;
             }
             var category = await GetRandomCategory(context.User.Id);
-            var audio = await GetRandomAudioForCategory(context.Guild.Id, category);
+            var audio = await GetRandomAudioForCategory(context.Guild.Id, category.Id);
 
             var channel = (context.User as IGuildUser)?.VoiceChannel;
             if (channel is null)
@@ -196,8 +195,11 @@ namespace DiscordBot.Modules
                 await context.Reply("You gotta be in a voice channel");
                 return;
             }
-            statsService.AddToHistory(context.Guild.Id, category, audio);
-            await Play(channel, audio);
+            statsService.AddToHistory(context.Guild.Id, new HistoryEntry {
+                Category = category,
+                NamedAudio = audio,
+            });
+            await Play(channel, audio.Audio);
         }
 
         public async Task PlaySound(SocketCommandContext context)
@@ -211,7 +213,7 @@ namespace DiscordBot.Modules
             var argPos = 0;
             context.Message.HasPrefix(botOptions.Prefix, client.CurrentUser, ref argPos);
             var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var msgCategory = commandParts[0].ToLower();
+            var msgCategory = commandParts[0].ToLowerInvariant();
             IVoiceChannel channel = null;
             string msgQuote = null;
             for (int i = 1; i < commandParts.Length; i++)
@@ -266,72 +268,54 @@ namespace DiscordBot.Modules
                 await context.Reply("You gotta be in a voice channel or use -c channelName");
                 return;
             }
-            Audio audio;
+            NamedAudio audio;
             Category category;
-            // Katie isn't allow to use her own voice
-            if ((context.User.Id == 302955588327833622 && msgCategory == "heck") ||
-                (context.User.Id == 181537270526902272 && msgCategory == "chacons") ||
-                (context.User.Id == 336341485655949313 && msgCategory == "zach") ||
-                (context.User.Id == 218600945372758016 && msgCategory == "saxton") ||
-                (context.User.Id == 155123403383242753 && msgCategory == "ted"))
+            if (msgQuote is null)
             {
-                category = await categoryRepo.GetCategoryByName("trump");
-                audio = await audioRepo.GetAudio("trump", "i-dont-think-so");
-            }
-            else if (msgQuote is null)
-            {
-                category = await categoryRepo.GetCategoryByName(msgCategory);
-                audio = await GetRandomAudioForCategory(context.Guild.Id, category);
+                audio = await GetRandomAudioForCategory(context.Guild.Id, msgCategory);
             }
             else
             {
-                category = await categoryRepo.GetCategoryByName(msgCategory);
-                audio = await audioRepo.GetAudio(msgCategory, msgQuote);
+                audio = await audioRepo.GetAudio(context.Guild.Id, msgCategory, msgQuote);
                 if (audio is null)
                 {
                     await context.Reply("That quote don't exist...");
                     return;
                 }
             }
-            statsService.AddToHistory(context.Guild.Id, category, audio);
-            Console.WriteLine($"Playing {audio.Name}: {audio.Path}");
-            await Play(channel, audio);
+            statsService.AddToHistory(context.Guild.Id, new HistoryEntry {
+                Category = new Category {
+                    Name = msgCategory
+                },
+                NamedAudio = audio
+            });
+            await Play(channel, audio.Audio);
         }
 
-        private async Task<Category> GetRandomCategory(ulong userId)
+        private async Task<Category> GetRandomCategory(ulong serverId)
         {
-            var allCategories = await categoryRepo.GetAllCategoriesWithAudio();
-            switch (userId)
-            {
-                case 302955588327833622:
-                    allCategories.RemoveAll(x => x.Name == "hexk");
-                    break;
-                case 181537270526902272:
-                    allCategories.RemoveAll(x => x.Name == "chacons");
-                    break;
-                case 336341485655949313:
-                    allCategories.RemoveAll(x => x.Name == "zach");
-                    break;
-                case 218600945372758016:
-                    allCategories.RemoveAll(x => x.Name == "saxton");
-                    break;
-                case 155123403383242753:
-                    allCategories.RemoveAll(x => x.Name == "ted");
-                    break;
-                default:
-                    break;
-            }
+            var allCategories = await categoryRepo.GetCategoriesWithAudio(serverId);
             var index = StaticRandom.Next(allCategories.Count);
             return allCategories[index];
         }
 
-        private async Task<Audio> GetRandomAudioForCategory(ulong serverId, Category category)
+        private async Task<NamedAudio> GetRandomAudioForCategory(ulong serverId, string category)
         {
-            var id = Convert.ToInt32(category.Id);
-            var playlist = await audioRepo.GetAllAudioForCategory(id);
+            var playlist = await audioRepo.GetAudioForCategory(serverId, category);
+            return SelectRandomAudio(serverId, playlist);
+        }
+
+        private async Task<NamedAudio> GetRandomAudioForCategory(ulong serverId, long categoryId)
+        {
+            var playlist = await audioRepo.GetAudioForCategory(categoryId);
+            return SelectRandomAudio(serverId, playlist);
+        }
+
+        private NamedAudio SelectRandomAudio(ulong serverId, List<NamedAudio> playlist)
+        {
             var takeAmount = Math.Max(1, Math.Min(botOptions.RecentCountValue, playlist.Count - 2));
-            var history = statsService.GetHistory(serverId).AsEnumerable().Reverse().Take(takeAmount).Select(x => x.Item2);
-            var available = playlist.Except(history).ToList();
+            var historyAudio = statsService.GetHistory(serverId).AsEnumerable().Take(takeAmount).Select(x => x.NamedAudio.Audio.Id).ToList();
+            var available = playlist.Where(x => !historyAudio.Contains(x.Audio.Id)).ToList();
             var index = StaticRandom.Next(available.Count);
             return available[index];
         }

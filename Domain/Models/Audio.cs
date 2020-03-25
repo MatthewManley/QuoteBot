@@ -5,11 +5,11 @@ namespace Domain.Models
     public class Audio : IEquatable<Audio>
     {
         public long Id { get; set; }
-        public string Name { get; set; }
         public string Path { get; set; }
+        public ulong Uploader { get; set; }
 
         public override bool Equals(object obj) => Equals(obj as Audio);
-        public override int GetHashCode() => (Id, Name, Path).GetHashCode();
+        public override int GetHashCode() => (Id, Path, Uploader).GetHashCode();
 
         public bool Equals(Audio other)
         {

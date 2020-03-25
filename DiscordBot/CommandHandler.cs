@@ -108,7 +108,7 @@ namespace DiscordBot
                 return;
             }
 
-            var categories = await categoryRepo.GetAllCategoriesWithAudio();
+            var categories = await categoryRepo.GetCategoriesWithAudio(context.Guild.Id);
             if (categories.Select(x => x.Name).Contains(command))
             {
                 var soundMod = serviceProvider.GetRequiredService<SoundModule>();

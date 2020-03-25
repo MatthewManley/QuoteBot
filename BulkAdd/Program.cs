@@ -16,69 +16,103 @@ namespace BulkAdd
         private static IAmazonS3 s3Client;
         private static AudioRepo audioRepo;
         private static CategoryRepo categoryRepo;
+        private static AudioOwnerRepo audioOwnerRepo;
         private static DbConnection connection;
+        private static AudioCategoryRepo audioCategoryRepo;
         static async Task Main(string[] args)
         {
             var dbPath = "/home/matthew/quotebot-data/db.sqlite";
-            var inputAudioDir = "/home/matthew/Downloads/halo";
+            // var inputAudioDir = "/home/matthew/Downloads/halo";
             var connectionStringBuilder = new SqliteConnectionStringBuilder();
             connectionStringBuilder.DataSource = dbPath;
             connection = new SqliteConnection(connectionStringBuilder.ConnectionString);
             audioRepo = new AudioRepo(connection);
             categoryRepo = new CategoryRepo(connection);
-            s3Client = new AmazonS3Client();
-            var dirInfo = new DirectoryInfo(inputAudioDir);
-            var haloCategory = await categoryRepo.GetCategoryByName("halo");
-            if (haloCategory is null)
+            audioOwnerRepo = new AudioOwnerRepo(connection);
+            audioCategoryRepo = new AudioCategoryRepo(connection);
+            ulong currentServerId = 178546341314691072;
+            var currentCategories = await categoryRepo.GetCategories(currentServerId);
+            var currentAudioOwners = await audioOwnerRepo.GetAudioOwners(currentServerId);
+            var audioOwnerCategoriesPairing = new List<(AudioOwner, List<Category>)>();
+            foreach (var audioOwner in currentAudioOwners)
             {
-                var id = await categoryRepo.CreateCategory("halo");
-                haloCategory = new Category {
-                    Id = id,
-                    Name = "halo"
-                };
+                var categories = (await audioCategoryRepo.GetAudioCategoriesByAudioOwnerId(audioOwner.Id)).Select(x => x.CategoryId).ToList();
+                
+                audioOwnerCategoriesPairing.Add((audioOwner, currentCategories.Where(x => categories.Contains(x.Id)).ToList()));
             }
-            await ParseDir(dirInfo, new Category[] { haloCategory });
-        }
-
-        public static async Task ParseDir(DirectoryInfo dir, Category[] categories)
-        {
-            var subDirs = dir.GetDirectories();
-            var files = dir.GetFiles();
-            foreach (var file in files)
+            var servers = new List<ulong>() { 305020806662979594, 636452095465226250 };
+            foreach (var server in servers)
             {
-                await AddFile(file, categories);
-            }
-            foreach (var subDir in subDirs)
-            {
-                var newCategories = new Category[categories.Length + 1];
-                Array.Copy(categories, newCategories, categories.Length);
-                var nextCategory = await categoryRepo.GetCategoryByName(subDir.Name);
-                if (nextCategory is null)
+                var serverCategories = new List<Category>();
+                foreach (var item in currentCategories)
                 {
-                    var id = await categoryRepo.CreateCategory(subDir.Name);
-                    nextCategory = new Category {
-                        Id = id,
-                        Name = subDir.Name
-                    };
+                    var newCategory = await categoryRepo.CreateCategory(new Category {
+                        Name = item.Name,
+                        OwnerId = server
+                    });
+                    serverCategories.Add(newCategory);
                 }
-                newCategories[newCategories.Length - 1] = nextCategory;
-                await ParseDir(subDir, newCategories);
+                foreach (var (audioOwner, categoryList) in audioOwnerCategoriesPairing)
+                {
+                    var newAudioOwner = await audioOwnerRepo.AddAudioOwner(new AudioOwner
+                    {
+                        AudioId = audioOwner.AudioId,
+                        Name = audioOwner.Name,
+                        OwnerId = server
+                    });
+                    foreach (var audioCategory in categoryList)
+                    {
+                        var newCategory = serverCategories.First(x => x.Name == audioCategory.Name);
+                        await audioCategoryRepo.AddAudioCategory(new AudioCategory {
+                            AudioOwnerId = newAudioOwner.Id,
+                            CategoryId = newCategory.Id
+                        });
+                    }
+                }
             }
         }
 
-        public static async Task AddFile(FileInfo file, Category[] categories)
-        {
-            var newPath = Guid.NewGuid().ToString();            
-            var name = file.Name.Substring(0, file.Name.IndexOf(".mp3"));
-            var audioId = await audioRepo.AddAudio(new Audio {
-                Name = name,
-                Path = newPath
-            });
-            foreach (var category in categories)
-            {
-                await audioRepo.AddCategoryToAudio(category.Id, audioId.Id);                
-            }
-            await s3Client.UploadObjectFromFilePathAsync("quotebot-audio", newPath, file.FullName, new Dictionary<string, object>());
-        }
+        // public static async Task ParseDir(DirectoryInfo dir, Category[] categories)
+        // {
+        //     var subDirs = dir.GetDirectories();
+        //     var files = dir.GetFiles();
+        //     foreach (var file in files)
+        //     {
+        //         await AddFile(file, categories);
+        //     }
+        //     foreach (var subDir in subDirs)
+        //     {
+        //         var newCategories = new Category[categories.Length + 1];
+        //         Array.Copy(categories, newCategories, categories.Length);
+        //         var nextCategory = await categoryRepo.GetCategoryByName(subDir.Name);
+        //         if (nextCategory is null)
+        //         {
+        //             var id = await categoryRepo.CreateCategory(subDir.Name);
+        //             nextCategory = new Category
+        //             {
+        //                 Id = id,
+        //                 Name = subDir.Name
+        //             };
+        //         }
+        //         newCategories[newCategories.Length - 1] = nextCategory;
+        //         await ParseDir(subDir, newCategories);
+        //     }
+        // }
+
+        // public static async Task AddFile(FileInfo file, Category[] categories)
+        // {
+        //     var newPath = Guid.NewGuid().ToString();
+        //     var name = file.Name.Substring(0, file.Name.IndexOf(".mp3"));
+        //     var audioId = await audioRepo.AddAudio(new Audio
+        //     {
+        //         Name = name,
+        //         Path = newPath
+        //     });
+        //     foreach (var category in categories)
+        //     {
+        //         await audioRepo.AddCategoryToAudio(category.Id, audioId.Id);
+        //     }
+        //     await s3Client.UploadObjectFromFilePathAsync("quotebot-audio", newPath, file.FullName, new Dictionary<string, object>());
+        // }
     }
 }
