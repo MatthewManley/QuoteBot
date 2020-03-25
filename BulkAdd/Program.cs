@@ -1,46 +1,84 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Amazon.S3;
+using Domain.Models;
+using Infrastructure;
 using Microsoft.Data.Sqlite;
 
 namespace BulkAdd
 {
     class Program
     {
-        static void Main(string[] args)
+        private static IAmazonS3 s3Client;
+        private static AudioRepo audioRepo;
+        private static CategoryRepo categoryRepo;
+        private static DbConnection connection;
+        static async Task Main(string[] args)
         {
-            if (args.Length != 3)
-            {
-                throw new ArgumentException("2 arguments expected");
-            }
-            var dbPath = args[0];
-            var inputAudioDir = args[1];
-            var outputAudioDir = args[2];
-            var audioFiles = Directory.GetFiles(inputAudioDir);
+            var dbPath = "/home/matthew/quotebot-data/db.sqlite";
+            var inputAudioDir = "/home/matthew/Downloads/halo";
             var connectionStringBuilder = new SqliteConnectionStringBuilder();
             connectionStringBuilder.DataSource = dbPath;
-            var sqlConnection = new SqliteConnection(connectionStringBuilder.ConnectionString);
-            sqlConnection.Open();
-            foreach (var audioFile in audioFiles)
+            connection = new SqliteConnection(connectionStringBuilder.ConnectionString);
+            audioRepo = new AudioRepo(connection);
+            categoryRepo = new CategoryRepo(connection);
+            s3Client = new AmazonS3Client();
+            var dirInfo = new DirectoryInfo(inputAudioDir);
+            var haloCategory = await categoryRepo.GetCategoryByName("halo");
+            if (haloCategory is null)
             {
-                var file = audioFile;
-                var mp3Index = audioFile.IndexOf(".mp3");
-                if (mp3Index != -1)
-                {
-                    file = audioFile.Substring(0, mp3Index);
-                }
-                var cmd = sqlConnection.CreateCommand();
-                var quoteName = file.Split('/').Last();
-                var newFileName = Guid.NewGuid().ToString();
-                var newPath = Path.Combine(outputAudioDir, newFileName);
-                File.Copy(audioFile, newPath);
-                cmd.CommandText = "INSERT INTO audio (category, name, path) VALUES ($category, $name, $path);";
-                cmd.Parameters.AddWithValue("$category", "halo");
-                cmd.Parameters.AddWithValue("$name", quoteName);
-                cmd.Parameters.AddWithValue("$path", newFileName);
-                cmd.ExecuteNonQuery();
+                var id = await categoryRepo.CreateCategory("halo");
+                haloCategory = new Category {
+                    Id = id,
+                    Name = "halo"
+                };
             }
-            sqlConnection.Close();
+            await ParseDir(dirInfo, new Category[] { haloCategory });
+        }
+
+        public static async Task ParseDir(DirectoryInfo dir, Category[] categories)
+        {
+            var subDirs = dir.GetDirectories();
+            var files = dir.GetFiles();
+            foreach (var file in files)
+            {
+                await AddFile(file, categories);
+            }
+            foreach (var subDir in subDirs)
+            {
+                var newCategories = new Category[categories.Length + 1];
+                Array.Copy(categories, newCategories, categories.Length);
+                var nextCategory = await categoryRepo.GetCategoryByName(subDir.Name);
+                if (nextCategory is null)
+                {
+                    var id = await categoryRepo.CreateCategory(subDir.Name);
+                    nextCategory = new Category {
+                        Id = id,
+                        Name = subDir.Name
+                    };
+                }
+                newCategories[newCategories.Length - 1] = nextCategory;
+                await ParseDir(subDir, newCategories);
+            }
+        }
+
+        public static async Task AddFile(FileInfo file, Category[] categories)
+        {
+            var newPath = Guid.NewGuid().ToString();            
+            var name = file.Name.Substring(0, file.Name.IndexOf(".mp3"));
+            var audioId = await audioRepo.AddAudio(new Audio {
+                Name = name,
+                Path = newPath
+            });
+            foreach (var category in categories)
+            {
+                await audioRepo.AddCategoryToAudio(category.Id, audioId.Id);                
+            }
+            await s3Client.UploadObjectFromFilePathAsync("quotebot-audio", newPath, file.FullName, new Dictionary<string, object>());
         }
     }
 }

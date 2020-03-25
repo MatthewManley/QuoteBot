@@ -4,7 +4,7 @@ namespace Domain.Models
 {
     public class Category : IEquatable<Category>
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; }
 
         public override bool Equals(object obj) => Equals(obj as Audio);

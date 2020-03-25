@@ -4,7 +4,7 @@ namespace Domain.Models
 {
     public class Audio : IEquatable<Audio>
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; }
         public string Path { get; set; }
 

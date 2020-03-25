@@ -31,8 +31,10 @@ namespace DiscordBot
             {
                 var sql = scope.ServiceProvider.GetRequiredService<DbConnection>();
                 await BuildDb(sql);
-                await scope.ServiceProvider.GetRequiredService<Bot>().Run();
+                var bot = scope.ServiceProvider.GetRequiredService<Bot>();
+                await bot.Run();
                 await Task.Delay(-1, stoppingToken);
+                await bot.Stop();
             }
         }
 

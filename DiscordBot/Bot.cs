@@ -37,6 +37,12 @@ namespace DiscordBot
             commandHandler.InitializeAsync();
         }
 
+        public async Task Stop()
+        {
+            await client.StopAsync();
+            await client.LogoutAsync();
+        }
+
         private Task Log(LogMessage msg)
         {
             logger.Log(Convert(msg.Severity), msg.Exception, msg.Message, msg.Source);

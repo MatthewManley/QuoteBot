@@ -18,7 +18,7 @@ namespace Infrastructure
             this.connection = connection;
         }
 
-        public async Task<Category> GetCategoryById(int id)
+        public async Task<Category> GetCategoryById(long id)
         {
             await connection.OpenAsync();
             using var cmd = connection.CreateCommand();
@@ -29,7 +29,7 @@ namespace Infrastructure
 
             var result = await reader.ReadFirstOrDefault(() => new Category
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1)
             });
 
@@ -47,7 +47,7 @@ namespace Infrastructure
 
             var result = await reader.ReadFirstOrDefault(() => new Category
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1)
             });
 
@@ -55,13 +55,13 @@ namespace Infrastructure
             return result;
         }
 
-        public async Task<int> CreateCategory(string name)
+        public async Task<long> CreateCategory(string name)
         {
             await connection.OpenAsync();
             var cmd = connection.CreateCommand();
             cmd.CommandText = "INSERT INTO category (name) VALUES ($name); SELECT last_insert_rowid();";
             cmd.AddParameterWithValue("$name", name.ToLowerInvariant());
-            var result = (int)await cmd.ExecuteScalarAsync();
+            var result = (long)await cmd.ExecuteScalarAsync();
             await connection.CloseAsync();
             return result;
         }
@@ -74,7 +74,7 @@ namespace Infrastructure
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new Category
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1)
             });
             var result = await enumerable.ToListAsync();
@@ -90,7 +90,7 @@ namespace Infrastructure
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new Category
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1)
             });
             var result = await enumerable.ToListAsync();
@@ -106,7 +106,7 @@ namespace Infrastructure
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new Category
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1)
             });
             var result = await enumerable.ToListAsync();

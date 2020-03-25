@@ -34,7 +34,7 @@ namespace Infrastructure
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new Audio
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1),
                 Path = reader.GetString(2)
             });
@@ -43,7 +43,7 @@ namespace Infrastructure
             return result;
         }
 
-        public async Task<List<Audio>> GetAllAudioForCategory(int categoryId)
+        public async Task<List<Audio>> GetAllAudioForCategory(long categoryId)
         {
             await connection.OpenAsync();
             using var cmd = connection.CreateCommand();
@@ -59,7 +59,7 @@ namespace Infrastructure
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new Audio
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1),
                 Path = reader.GetString(2)
             });
@@ -68,7 +68,7 @@ namespace Infrastructure
             return result;
         }
 
-        public async Task<Audio> GetAudio(int id)
+        public async Task<Audio> GetAudio(long id)
         {
             await connection.OpenAsync();
             using var cmd = connection.CreateCommand();
@@ -83,7 +83,7 @@ namespace Infrastructure
             using var reader = await cmd.ExecuteReaderAsync();
             var result = await reader.ReadFirstOrDefault(() => new Audio
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1),
                 Path = reader.GetString(2)
             });
@@ -110,7 +110,7 @@ namespace Infrastructure
 
             var result = await reader.ReadFirstOrDefault(() => new Audio
             {
-                Id = reader.GetInt32(0),
+                Id = reader.GetInt64(0),
                 Name = reader.GetString(1),
                 Path = reader.GetString(2)
             });
@@ -128,7 +128,7 @@ namespace Infrastructure
             var enumerable = reader.ReadToEnumerable(() => new Audio
             {
                 Name = reader.GetString(0),
-                Id = reader.GetInt32(1),
+                Id = reader.GetInt64(1),
                 Path = reader.GetString(2)
             });
             var result = await enumerable.ToListAsync();
@@ -136,15 +136,29 @@ namespace Infrastructure
             return result;
         }
 
-        public async Task AddAudio(Audio audio)
+        public async Task<Audio> AddAudio(Audio audio)
         {
             await connection.OpenAsync();
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "INSERT INTO audio (name, path) VALUES ($name, $path);";
+            cmd.CommandText = "INSERT INTO audio (name, path) VALUES ($name, $path); SELECT last_insert_rowid();";
             cmd.AddParameterWithValue("$name", audio.Name);
             cmd.AddParameterWithValue("$path", audio.Path);
-            await cmd.ExecuteNonQueryAsync();
+            var id = (long)await cmd.ExecuteScalarAsync();
             await connection.CloseAsync();
+            audio.Id = id;
+            return audio;
+        }
+
+        public async Task<long> AddCategoryToAudio(long categoryId, long audioId)
+        {
+            await connection.OpenAsync();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "INSERT INTO audio_category (audio, category) VALUES ($audio, $category); SELECT last_insert_rowid();";
+            cmd.AddParameterWithValue("$audio", audioId);
+            cmd.AddParameterWithValue("$category", categoryId);
+            var id = (long)await cmd.ExecuteScalarAsync();
+            await connection.CloseAsync();
+            return id;
         }
     }
 }

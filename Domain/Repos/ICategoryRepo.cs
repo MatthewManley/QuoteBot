@@ -7,11 +7,11 @@ namespace Domain.Repos
 {
     public interface ICategoryRepo
     {
-        Task<int> CreateCategory(string name);
+        Task<long> CreateCategory(string name);
         Task<List<Category>> GetAllCategories();
         Task<List<Category>> GetAllCategoriesWithAudio();
         Task<List<Category>> GetAllCategoriesWithNoAudio();
-        Task<Category> GetCategoryById(int id);
+        Task<Category> GetCategoryById(long id);
         Task<Category> GetCategoryByName(string name);
     }
 }
