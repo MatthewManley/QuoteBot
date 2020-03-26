@@ -59,7 +59,7 @@ namespace Infrastructure
             using var cmd = connection.CreateCommand();
             cmd.CommandText =
                 "SELECT category.id, category.name, category.owner FROM category " +
-                "WHERE category.owner = $ownerId AND EXISTS(SELECT category FROM audio_category WHERE category.id = audio_category.category);;";
+                "WHERE category.owner = $ownerId AND EXISTS(SELECT category FROM audio_category WHERE category.id = audio_category.category);";
             cmd.AddParameterWithValue("$ownerId", ownerId.ToString());
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new Category

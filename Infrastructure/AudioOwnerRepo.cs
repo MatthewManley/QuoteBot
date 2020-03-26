@@ -32,18 +32,6 @@ namespace Infrastructure
             return audioOwner;
         }
 
-        public async Task AddAudioOwnerToCategory(long audioOwnerId, long categoryId)
-        {
-            await connection.OpenAsync();
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText =
-                "INSERT INTO audio_category (category, audio_owner) VALUES ($category, $owner);";
-            cmd.AddParameterWithValue("$category", categoryId);
-            cmd.AddParameterWithValue("$owner", audioOwnerId);
-            await cmd.ExecuteNonQueryAsync();
-            await connection.CloseAsync();
-        }
-
         public async Task<List<AudioOwner>> GetAudioOwners(ulong ownerId)
         {
             await connection.OpenAsync();
@@ -54,8 +42,8 @@ namespace Infrastructure
             var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new AudioOwner {
                 Id = reader.GetInt64(0),
-                OwnerId = ulong.Parse(reader.GetString(1)),
-                AudioId = reader.GetInt64(2),
+                AudioId = reader.GetInt64(1),
+                OwnerId = ulong.Parse(reader.GetString(2)),
                 Name = reader.GetString(3)
             });
             var result = await enumerable.ToListAsync();

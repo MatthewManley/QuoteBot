@@ -33,13 +33,6 @@ namespace BulkAdd
             ulong currentServerId = 178546341314691072;
             var currentCategories = await categoryRepo.GetCategories(currentServerId);
             var currentAudioOwners = await audioOwnerRepo.GetAudioOwners(currentServerId);
-            var audioOwnerCategoriesPairing = new List<(AudioOwner, List<Category>)>();
-            foreach (var audioOwner in currentAudioOwners)
-            {
-                var categories = (await audioCategoryRepo.GetAudioCategoriesByAudioOwnerId(audioOwner.Id)).Select(x => x.CategoryId).ToList();
-                
-                audioOwnerCategoriesPairing.Add((audioOwner, currentCategories.Where(x => categories.Contains(x.Id)).ToList()));
-            }
             var servers = new List<ulong>() { 305020806662979594, 636452095465226250 };
             foreach (var server in servers)
             {
@@ -52,7 +45,7 @@ namespace BulkAdd
                     });
                     serverCategories.Add(newCategory);
                 }
-                foreach (var (audioOwner, categoryList) in audioOwnerCategoriesPairing)
+                foreach (var audioOwner in currentAudioOwners)
                 {
                     var newAudioOwner = await audioOwnerRepo.AddAudioOwner(new AudioOwner
                     {
@@ -60,9 +53,11 @@ namespace BulkAdd
                         Name = audioOwner.Name,
                         OwnerId = server
                     });
-                    foreach (var audioCategory in categoryList)
+                    var audioCategories = (await audioCategoryRepo.GetAudioCategoriesByAudioOwnerId(audioOwner.Id)).Select(x => x.CategoryId);
+                    foreach (var audioCategoryId in audioCategories)
                     {
-                        var newCategory = serverCategories.First(x => x.Name == audioCategory.Name);
+                        var firstCategory = currentCategories.First(x => x.Id == audioCategoryId);
+                        var newCategory = serverCategories.First(x => x.Name == firstCategory.Name);
                         await audioCategoryRepo.AddAudioCategory(new AudioCategory {
                             AudioOwnerId = newAudioOwner.Id,
                             CategoryId = newCategory.Id

@@ -38,8 +38,8 @@ namespace Infrastructure
             cmd.AddParameterWithValue("$audio_owner", audioOwnerId);
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => new AudioCategory {
-                AudioOwnerId = reader.GetInt64(0),
-                CategoryId = reader.GetInt64(1)
+                CategoryId = reader.GetInt64(0),
+                AudioOwnerId = reader.GetInt64(1)
             });
             var result = await enumerable.ToListAsync();
             await connection.CloseAsync();
