@@ -27,9 +27,10 @@ namespace Infrastructure
                 "INNER JOIN audio_category ON category.id = audio_category.category " +
                 "INNER JOIN audio_owner ON audio_category.audio_owner = audio_owner.id " +
                 "INNER JOIN audio ON audio_owner.audio = audio.id " +
-                "WHERE category.owner = $ownerId AND category.name = $categoryName AND audio_owner.owner = $ownerId;";
+                "WHERE category.owner = $ownerId AND category.name = $categoryName AND audio_owner.owner = $ownerId AND audio_owner.name = $audioName;";
             cmd.AddParameterWithValue("$ownerId", ownerId.ToString());
             cmd.AddParameterWithValue("$categoryName", categoryName);
+            cmd.AddParameterWithValue("$audioName", audioName);
 
             using var reader = await cmd.ExecuteReaderAsync();
             var enumerable = reader.ReadToEnumerable(() => {
