@@ -1,10 +1,9 @@
 using System;
 
-namespace DiscordBot.Options
+namespace Domain.Options
 {
     public class BotOptions
     {
-        public string DatabasePath { get; set; }
         public string Owner { get; set; }
         public string TempPath { get; set; }
 

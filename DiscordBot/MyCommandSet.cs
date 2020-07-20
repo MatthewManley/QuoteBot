@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DiscordBot
+﻿namespace DiscordBot
 {
-    public abstract class MyCommandSet
+    public class MyCommandSet
     {
     }
 }

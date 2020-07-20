@@ -1,9 +1,8 @@
-﻿using System;
+﻿using Domain.Models;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
-using Domain.Models;
 
 namespace DiscordBot.Services
 {
@@ -11,8 +10,7 @@ namespace DiscordBot.Services
     {
         private DateTime startTime;
         private ulong seenMessages;
-        // private ConcurrentQueue<Audio> historyQueue;
-        private ConcurrentDictionary<ulong, ConcurrentQueue<HistoryEntry>> serverHistories = new ConcurrentDictionary<ulong, ConcurrentQueue<HistoryEntry>>();
+        private readonly ConcurrentDictionary<ulong, ConcurrentQueue<HistoryEntry>> serverHistories = new ConcurrentDictionary<ulong, ConcurrentQueue<HistoryEntry>>();
 
         public void Init()
         {

@@ -2,17 +2,15 @@
 using Discord;
 using Discord.Audio;
 using Discord.Commands;
-using DiscordBot.Options;
 using DiscordBot.Services;
 using Domain.Models;
+using Domain.Options;
 using Domain.Repos;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,64 +19,49 @@ namespace DiscordBot.Modules
 {
     public class SoundModule : MyCommandSet
     {
-        private readonly IAudioRepo audioRepo;
+        private readonly IQuoteBotRepo quoteBotRepo;
         private readonly StatsService statsService;
-        private readonly IUserRepo userRepo;
-        private readonly IDiscordClient client;
-        private readonly CommandHandler commandHandler;
-        private readonly ICategoryRepo categoryRepo;
         private readonly IAmazonS3 s3Client;
         private readonly BotOptions botOptions;
 
         public SoundModule(
-            IAudioRepo audioRepo,
+            IQuoteBotRepo quoteBotRepo,
             StatsService statsService,
-            IUserRepo userRepo,
-            IDiscordClient client,
-            CommandHandler commandHandler,
-            ICategoryRepo categoryRepo,
             IAmazonS3 s3Client,
             IOptions<BotOptions> botOptions)
         {
-            this.audioRepo = audioRepo;
+            this.quoteBotRepo = quoteBotRepo;
             this.statsService = statsService;
-            this.userRepo = userRepo;
-            this.client = client;
-            this.commandHandler = commandHandler;
-            this.categoryRepo = categoryRepo;
             this.s3Client = s3Client;
             this.botOptions = botOptions.Value;
         }
 
         [MyCommand("list")]
-        public async Task List(SocketCommandContext context)
+        public async Task List(SocketCommandContext context, string[] command)
         {
-            int pos = 0;
-            var prefix = context.Message.HasPrefix(botOptions.Prefix, client.CurrentUser, ref pos);
-            var parts = context.Message.Content.Substring(pos).Trim().Split(" ");
-            if (parts.Length == 1)
+            if (command.Length == 1)
             {
                 await ListCategories(context, 1);
                 return;
             }
-            else if (parts.Length == 2)
+            else if (command.Length == 2)
             {
-                if (int.TryParse(parts[1], out var result))
+                if (int.TryParse(command[1], out var result))
                 {
                     await ListCategories(context, result);
                     return;
                 }
                 else
                 {
-                    await ListAudioForCategory(context, parts[1], 1);
+                    await ListAudioForCategory(context, command[1], 1);
                     return;
                 }
             }
-            else if (parts.Length == 3)
+            else if (command.Length == 3)
             {
-                if (int.TryParse(parts[2], out var result))
+                if (int.TryParse(command[2], out var result))
                 {
-                    await ListAudioForCategory(context, parts[1], result);
+                    await ListAudioForCategory(context, command[1], result);
                     return;
                 }
             }
@@ -86,7 +69,7 @@ namespace DiscordBot.Modules
 
         private async Task ListAudioForCategory(SocketCommandContext context, string category, int page)
         {
-            var sounds = await audioRepo.GetAudioForCategory(context.Guild.Id, category.ToLowerInvariant());
+            var sounds = await quoteBotRepo.GetAudioInCategory(context.Guild.Id, category.ToLowerInvariant());
             if (sounds.Count == 0)
             {
                 await context.Reply("No sounds found for that category.");
@@ -129,10 +112,10 @@ namespace DiscordBot.Modules
 
         private async Task ListCategories(SocketCommandContext context, int page)
         {
-            var categories = await categoryRepo.GetCategoriesWithAudio(context.Guild.Id);
+            var categories = await quoteBotRepo.GetCategoriesWithAudio(context.Guild.Id);
             var pageMinusOne = page - 1;
             const int categoriesPerPage = 30;
-            var pages = categories.Count / categoriesPerPage;
+            var pages = categories.Count() / categoriesPerPage;
             if (pageMinusOne > pages)
             {
                 var errorMsg = pages == 0 ?
@@ -171,14 +154,14 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("history")]
-        public async Task History(SocketCommandContext context)
+        public async Task History(SocketCommandContext context, string[] command)
         {
             var history = statsService.GetHistory(context.Guild.Id);
             await context.Reply(string.Join("\n", history.Select(x => $"{x.Category.Name} {x.NamedAudio.AudioOwner.Name}")));
         }
 
         [MyCommand("random")]
-        public async Task Rnaomd(SocketCommandContext context)
+        public async Task Random(SocketCommandContext context, string[] command)
         {
             // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
@@ -186,7 +169,7 @@ namespace DiscordBot.Modules
                 await context.Reply("I am already doing a quote calm the fuck down.");
                 return;
             }
-            var category = await GetRandomCategory(context.User.Id);
+            var category = await GetRandomCategory(context.Guild.Id);
             var audio = await GetRandomAudioForCategory(context.Guild.Id, category.Id);
 
             var channel = (context.User as IGuildUser)?.VoiceChannel;
@@ -195,14 +178,15 @@ namespace DiscordBot.Modules
                 await context.Reply("You gotta be in a voice channel");
                 return;
             }
-            statsService.AddToHistory(context.Guild.Id, new HistoryEntry {
+            statsService.AddToHistory(context.Guild.Id, new HistoryEntry
+            {
                 Category = category,
                 NamedAudio = audio,
             });
-            await Play(channel, audio.Audio);
+            await Play(channel, audio.Audio, CancellationToken.None);
         }
 
-        public async Task PlaySound(SocketCommandContext context)
+        public async Task PlaySound(SocketCommandContext context, string[] command)
         {
             // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
@@ -210,15 +194,12 @@ namespace DiscordBot.Modules
                 await context.Reply("I am already doing a quote calm the fuck down.");
                 return;
             }
-            var argPos = 0;
-            context.Message.HasPrefix(botOptions.Prefix, client.CurrentUser, ref argPos);
-            var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var msgCategory = commandParts[0].ToLowerInvariant();
+            var msgCategory = command[0].ToLowerInvariant();
             IVoiceChannel channel = null;
             string msgQuote = null;
-            for (int i = 1; i < commandParts.Length; i++)
+            for (int i = 1; i < command.Length; i++)
             {
-                var part = commandParts[i].ToLower();
+                var part = command[i].ToLower();
                 if (part.Equals("-c") || part.Equals("--channel"))
                 {
                     if (!(channel is null))
@@ -227,8 +208,8 @@ namespace DiscordBot.Modules
                         return;
                     }
                     // Error if there is no channel after -c or its not a proper mention
-                    if (i + 1 >= commandParts.Length ||
-                        !TryGetVoiceChannel(context, commandParts[i + 1], out var voiceChannel))
+                    if (i + 1 >= command.Length ||
+                        !TryGetVoiceChannel(context, command[i + 1], out var voiceChannel))
                     {
                         await context.Reply("Thats ain't no valid voice channel");
                         return;
@@ -244,13 +225,13 @@ namespace DiscordBot.Modules
                         await context.Reply("Don't be greedy, you only get one quote at a time.");
                         return;
                     }
-                    if (i + 1 >= commandParts.Length)
+                    if (i + 1 >= command.Length)
                     {
                         await context.Reply("Don't leave me hanging, say what quote you want played.");
                         return;
                     }
                     i++;
-                    msgQuote = commandParts[i].ToLower();
+                    msgQuote = command[i].ToLower();
                 }
                 else if (msgQuote is null)
                 {
@@ -262,52 +243,54 @@ namespace DiscordBot.Modules
                     return;
                 }
             }
-            channel = channel ?? (context.User as IGuildUser)?.VoiceChannel;
+            channel ??= (context.User as IGuildUser)?.VoiceChannel;
             if (channel is null)
             {
                 await context.Reply("You gotta be in a voice channel or use -c channelName");
                 return;
             }
-            NamedAudio audio;
-            Category category;
+            NamedAudio namedAudio;
             if (msgQuote is null)
             {
-                audio = await GetRandomAudioForCategory(context.Guild.Id, msgCategory);
+                namedAudio = await GetRandomAudioForCategory(context.Guild.Id, msgCategory);
             }
             else
             {
-                audio = await audioRepo.GetAudio(context.Guild.Id, msgCategory, msgQuote);
-                if (audio is null)
+                namedAudio = await quoteBotRepo.GetAudio(context.Guild.Id, msgCategory, msgQuote);
+                if (namedAudio is null)
                 {
                     await context.Reply("That quote don't exist...");
                     return;
                 }
             }
-            statsService.AddToHistory(context.Guild.Id, new HistoryEntry {
-                Category = new Category {
+            statsService.AddToHistory(context.Guild.Id, new HistoryEntry
+            {
+                Category = new Category
+                {
                     Name = msgCategory
                 },
-                NamedAudio = audio
+                NamedAudio = namedAudio
             });
-            await Play(channel, audio.Audio);
+            await Play(channel, namedAudio.Audio, CancellationToken.None);
         }
 
         private async Task<Category> GetRandomCategory(ulong serverId)
         {
-            var allCategories = await categoryRepo.GetCategoriesWithAudio(serverId);
+            //TODO: handle error if there are no categories
+            var allCategories = await quoteBotRepo.GetCategoriesWithAudio(serverId);
             var index = StaticRandom.Next(allCategories.Count);
             return allCategories[index];
         }
 
         private async Task<NamedAudio> GetRandomAudioForCategory(ulong serverId, string category)
         {
-            var playlist = await audioRepo.GetAudioForCategory(serverId, category);
-            return SelectRandomAudio(serverId, playlist);
+            var playlist = await quoteBotRepo.GetAudioInCategory(serverId, category);
+            return SelectRandomAudio(serverId, playlist.ToList());
         }
 
-        private async Task<NamedAudio> GetRandomAudioForCategory(ulong serverId, long categoryId)
+        private async Task<NamedAudio> GetRandomAudioForCategory(ulong serverId, uint categoryId)
         {
-            var playlist = await audioRepo.GetAudioForCategory(categoryId);
+            var playlist = await quoteBotRepo.GetAudioInCategory(categoryId);
             return SelectRandomAudio(serverId, playlist);
         }
 
@@ -349,46 +332,47 @@ namespace DiscordBot.Modules
 
         private static async Task<double> GetDuration(string path)
         {
-            using (var proc = Process.Start(new ProcessStartInfo
+            using var proc = Process.Start(new ProcessStartInfo
             {
                 FileName = "ffprobe",
                 Arguments = $"-show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i \"{path}\"",
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true
-            }))
-            {
-                var result = await proc.StandardOutput.ReadToEndAsync();
-                return Convert.ToDouble(result);
-            }
+            });
+            var result = await proc.StandardOutput.ReadToEndAsync();
+            return Convert.ToDouble(result);
         }
 
-        private async Task Play(IVoiceChannel vc, Audio audio)
+        private async Task Play(IVoiceChannel vc, Audio audio, CancellationToken cancellationToken)
         {
-            using (var ffmpeg = CreateStream())
-            using (var output = ffmpeg.StandardOutput.BaseStream)
-            using (var audioClient = await vc.ConnectAsync())
-            using (var discord = audioClient.CreatePCMStream(AudioApplication.Mixed, bufferMillis: 1))
+            using var s3object = await s3Client.GetObjectAsync("quotebot-audio", audio.Path, cancellationToken);
+            using var ffmpeg = CreateStream();
+            using var output = ffmpeg.StandardOutput.BaseStream;
+            var inputTask = Task.Run(async () =>
             {
-                var inputTask = Task.Run(async () =>
-                {
-                    using (var s3object = await s3Client.GetObjectAsync("quotebot-audio", audio.Path))
-                    using (var input = ffmpeg.StandardInput.BaseStream)
-                    {
-                        await s3object.ResponseStream.CopyToAsync(input);
-                    }
-                });
-
                 try
                 {
-                    await output.CopyToAsync(discord);
-                    await inputTask;
+                    using var input = ffmpeg.StandardInput.BaseStream;
+                    await s3object.ResponseStream.CopyToAsync(input, cancellationToken);
                 }
-                finally
+                catch (Exception ex)
                 {
-                    await discord.FlushAsync();
+                    throw ex;
                 }
+            });
+            using var audioClient = await vc.ConnectAsync();
+            using var discord = audioClient.CreatePCMStream(AudioApplication.Mixed, bufferMillis: 1);
+            try
+            {
+                await output.CopyToAsync(discord, cancellationToken);
+                await inputTask;
             }
+            finally
+            {
+                await discord.FlushAsync(cancellationToken);
+            }
+
             await vc.DisconnectAsync();
         }
     }

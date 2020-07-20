@@ -2,8 +2,8 @@ using System;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
-using DiscordBot.Options;
 using DiscordBot.Services;
+using Domain.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -51,23 +51,16 @@ namespace DiscordBot
 
         private static LogLevel Convert(LogSeverity logSeverity)
         {
-            switch (logSeverity)
+            return logSeverity switch
             {
-                case LogSeverity.Critical:
-                    return LogLevel.Critical;
-                case LogSeverity.Error:
-                    return LogLevel.Error;
-                case LogSeverity.Warning:
-                    return LogLevel.Warning;
-                case LogSeverity.Info:
-                    return LogLevel.Information;
-                case LogSeverity.Verbose:
-                    return LogLevel.Debug;
-                case LogSeverity.Debug:
-                    return LogLevel.Trace;
-                default:
-                    throw new NotImplementedException();
-            }
+                LogSeverity.Critical => LogLevel.Critical,
+                LogSeverity.Error => LogLevel.Error,
+                LogSeverity.Warning => LogLevel.Warning,
+                LogSeverity.Info => LogLevel.Information,
+                LogSeverity.Verbose => LogLevel.Debug,
+                LogSeverity.Debug => LogLevel.Trace,
+                _ => throw new NotImplementedException(),
+            };
         }
 
         private async Task Ready()

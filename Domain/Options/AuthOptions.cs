@@ -1,4 +1,4 @@
-namespace DiscordBot.Options
+namespace Domain.Options
 {
     public class AuthOptions
     {
