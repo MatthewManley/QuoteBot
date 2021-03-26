@@ -2,7 +2,7 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using DiscordBot.Modules;
-using Domain.Repos;
+using Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -122,7 +122,9 @@ namespace DiscordBot
             var prefix = (await serverRepo.GetServerPrefix(guildChannel.GuildId))?.Trim();
 
             if (string.IsNullOrWhiteSpace(prefix))
-                return (false, argPos);
+            {
+                prefix = "!"; 
+            }
 
             var hasPrefix = message.HasStringPrefix(prefix, ref argPos, StringComparison.InvariantCultureIgnoreCase);
 

@@ -11,6 +11,6 @@ namespace Domain.Models
 
         public override bool Equals(object obj) => Equals(obj as AudioOwner);
         public override int GetHashCode() => (AudioId, OwnerId, Name).GetHashCode();
-        public bool Equals(AudioOwner other) => other != null && AudioId == other.AudioId && OwnerId == other.OwnerId;
+        public bool Equals(AudioOwner other) => other != null && Id == other.Id;
     }
 }

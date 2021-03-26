@@ -1,0 +1,38 @@
+﻿@model QuoteBotWeb.Models.Guild.CategoriesViewModel
+
+@foreach (var (category, quotes) in Model.Categories)
+{
+    var categoryCollapse = $"collapse{category.Id}";
+    <div class="row">
+        <div class="col">@category.Name</div>
+        <div class="col">
+            <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#@categoryCollapse">Quotes</button>
+        </div>
+        <div class="col">
+            <a class="btn btn-warning" href="/">Edit Category</a>
+        </div>
+        <div class="col">
+            <a class="btn btn-danger" href="/">Delete Category</a>
+        </div>
+    </div>
+    <div class="collapse" id="@categoryCollapse">
+        @foreach (var quote in quotes)
+        {
+            var audioPath = $"/Audio/{quote.AudioId}";
+            <div class="row">
+                <div class="col">@quote.Name</div>
+                <div class="col">
+                    <a class="btn btn-warning" href="/">Edit Quote</a>
+                </div>
+                <div class="col">
+                    <a class="btn btn-danger" href="/">Remove Quote</a>
+                </div>
+            </div>
+            <div class="col">
+                <audio controls preload="none" controlslist="nodownload">
+                    <source src="@audioPath">
+                </audio>
+            </div>
+        }
+    </div>
+}

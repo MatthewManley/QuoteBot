@@ -1,4 +1,4 @@
-﻿using Domain.Repos;
+﻿using Domain.Repositories;
 using System.Threading.Tasks;
 
 namespace Infrastructure
@@ -7,7 +7,7 @@ namespace Infrastructure
     {
         public Task<string> GetServerPrefix(ulong serverId)
         {
-            return Task.FromResult("!");
+            return Task.FromResult(">");
         }
     }
 }

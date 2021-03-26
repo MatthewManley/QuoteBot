@@ -5,9 +5,6 @@ namespace Domain.Options
     public class BotOptions
     {
         public string Owner { get; set; }
-        public string TempPath { get; set; }
-
-        public string Prefix { get; set; } = "!";
 
         public string RecentCount { get; set; }
         private const int RecentCountDefault = 5;

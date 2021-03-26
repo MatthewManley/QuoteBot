@@ -3,9 +3,10 @@ using Discord;
 using Discord.Audio;
 using Discord.Commands;
 using DiscordBot.Services;
+using Domain;
 using Domain.Models;
 using Domain.Options;
-using Domain.Repos;
+using Domain.Repositories;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -69,7 +70,7 @@ namespace DiscordBot.Modules
 
         private async Task ListAudioForCategory(SocketCommandContext context, string category, int page)
         {
-            var sounds = await quoteBotRepo.GetAudioInCategory(context.Guild.Id, category.ToLowerInvariant());
+            var sounds = await quoteBotRepo.GetAudioInCategory(context.Guild.Id, category.ToLowerInvariant()).ToList();
             if (sounds.Count == 0)
             {
                 await context.Reply("No sounds found for that category.");
@@ -112,7 +113,7 @@ namespace DiscordBot.Modules
 
         private async Task ListCategories(SocketCommandContext context, int page)
         {
-            var categories = await quoteBotRepo.GetCategoriesWithAudio(context.Guild.Id);
+            var categories = await quoteBotRepo.GetCategoriesWithAudio(context.Guild.Id).ToList();
             var pageMinusOne = page - 1;
             const int categoriesPerPage = 30;
             var pages = categories.Count() / categoriesPerPage;
@@ -166,7 +167,7 @@ namespace DiscordBot.Modules
             // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
             {
-                await context.Reply("I am already doing a quote calm the fuck down.");
+                await context.Reply("I am already doing a quote calm down.");
                 return;
             }
             var category = await GetRandomCategory(context.Guild.Id);
@@ -191,7 +192,7 @@ namespace DiscordBot.Modules
             // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
             {
-                await context.Reply("I am already doing a quote calm the fuck down.");
+                await context.Reply("I am already doing a quote calm down.");
                 return;
             }
             var msgCategory = command[0].ToLowerInvariant();
@@ -277,7 +278,7 @@ namespace DiscordBot.Modules
         private async Task<Category> GetRandomCategory(ulong serverId)
         {
             //TODO: handle error if there are no categories
-            var allCategories = await quoteBotRepo.GetCategoriesWithAudio(serverId);
+            var allCategories = await quoteBotRepo.GetCategoriesWithAudio(serverId).ToList();
             var index = StaticRandom.Next(allCategories.Count);
             return allCategories[index];
         }
@@ -290,7 +291,7 @@ namespace DiscordBot.Modules
 
         private async Task<NamedAudio> GetRandomAudioForCategory(ulong serverId, uint categoryId)
         {
-            var playlist = await quoteBotRepo.GetAudioInCategory(categoryId);
+            var playlist = await quoteBotRepo.GetAudioInCategory(categoryId).ToList();
             return SelectRandomAudio(serverId, playlist);
         }
 
@@ -323,7 +324,7 @@ namespace DiscordBot.Modules
             return Process.Start(new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-hide_banner -loglevel panic -f mp3 -i pipe:0 -af \"adelay=50|50, volume=3.5, loudnorm=I=-5\" -ac 2 -f s16le -ar 48000 pipe:1",
+                Arguments = $"-hide_banner -loglevel panic -f mp3 -i pipe:0 -af \"adelay=50|50\" -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardInput = true
@@ -346,20 +347,14 @@ namespace DiscordBot.Modules
 
         private async Task Play(IVoiceChannel vc, Audio audio, CancellationToken cancellationToken)
         {
+
             using var s3object = await s3Client.GetObjectAsync("quotebot-audio", audio.Path, cancellationToken);
             using var ffmpeg = CreateStream();
             using var output = ffmpeg.StandardOutput.BaseStream;
             var inputTask = Task.Run(async () =>
             {
-                try
-                {
-                    using var input = ffmpeg.StandardInput.BaseStream;
-                    await s3object.ResponseStream.CopyToAsync(input, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
+                using var input = ffmpeg.StandardInput.BaseStream;
+                await s3object.ResponseStream.CopyToAsync(input, cancellationToken);
             });
             using var audioClient = await vc.ConnectAsync();
             using var discord = audioClient.CreatePCMStream(AudioApplication.Mixed, bufferMillis: 1);

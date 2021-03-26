@@ -1,9 +1,11 @@
-﻿using Discord;
+﻿using Amazon.Extensions.NETCore.Setup;
+using Aws;
+using Discord;
 using Discord.WebSocket;
 using DiscordBot.Modules;
 using DiscordBot.Services;
 using Domain.Options;
-using Domain.Repos;
+using Domain.Repositories;
 using Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,18 +25,21 @@ namespace DiscordBot
             Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((hostContext, builder) =>
                 {
-                    if (hostContext.HostingEnvironment.IsDevelopment())
+                    var environment = hostContext.HostingEnvironment;
+                    builder.AddSystemsManager($"/QuoteBot/{environment.EnvironmentName}/");
+                    if (environment.IsDevelopment())
                     {
                         builder.AddUserSecrets<Program>();
                     }
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    var environmentName = hostContext.HostingEnvironment.EnvironmentName;
                     var configuration = hostContext.Configuration;
                     services.AddDefaultAWSOptions(configuration.GetAWSOptions())
                         .Configure<BotOptions>(configuration.GetSection("Bot"))
-                        .Configure<AuthOptions>(hostContext.Configuration.GetSection("Auth"))
-                        .Configure<DbOptions>(hostContext.Configuration.GetSection("Database"))
+                        .Configure<AuthOptions>(configuration.GetSection("Auth"))
+                        .Configure<DbOptions>(configuration.GetSection("Database"))
                         .AddSingleton<DiscordSocketClient>()
                         .AddTransient<IDiscordClient>(x => x.GetRequiredService<DiscordSocketClient>())
                         .AddSingleton<Bot>()
