@@ -8,11 +8,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y ffmpeg opus-too
 
 FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
 WORKDIR /src
-COPY ["QuoteBotWeb.csproj", "QuoteBotWeb/"]
-COPY ["../Domain.csproj", "Domain/"]
-COPY ["../Discord.csproj", "Discord/"]
-COPY ["../Aws.csproj", "Aws/"]
-RUN dotnet restore "QuoteBotWeb.csproj"
+COPY ["QuoteBotWeb/QuoteBotWeb.csproj", "QuoteBotWeb/"]
+COPY ["Domain/Domain.csproj", "Domain/"]
+COPY ["Discord/Discord.csproj", "Discord/"]
+COPY ["Aws/Aws.csproj", "Aws/"]
+RUN dotnet restore "QuoteBotWeb/QuoteBotWeb.csproj"
 COPY . .
 WORKDIR "/src/QuoteBotWeb"
 RUN dotnet build "QuoteBotWeb.csproj" -c Release -o /app/build

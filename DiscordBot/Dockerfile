@@ -6,10 +6,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y ffmpeg libopus0
 
 FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
 WORKDIR /src
-COPY ["DiscordBot.csproj", "DiscordBot/"]
-COPY ["../Domain/Domain.csproj", "Domain/"]
-COPY ["../Infrastructure/Infrastructure.csproj", "Infrastructure/"]
-RUN dotnet restore "DiscordBot.csproj"
+COPY ["DiscordBot/DiscordBot.csproj", "DiscordBot/"]
+COPY ["Domain/Domain.csproj", "Domain/"]
+COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
+RUN dotnet restore "DiscordBot/DiscordBot.csproj"
 COPY . .
 WORKDIR "/src/DiscordBot"
 RUN dotnet build "DiscordBot.csproj" -c Release -o /app/build
