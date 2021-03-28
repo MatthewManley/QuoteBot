@@ -6,7 +6,6 @@ using DiscordBot.Modules;
 using DiscordBot.Services;
 using Domain.Options;
 using Domain.Repositories;
-using Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -48,9 +47,8 @@ namespace DiscordBot
                         .AddTransient<InfoModule>()
                         .AddTransient<SoundModule>()
                         .AddSingleton<StatsService>()
-                        .AddTransient<IQuoteBotRepo, QuoteBotRepo>()
-                        .AddTransient<IServerRepo, FakeServerRepo>()
                         .AddAWSService<Amazon.S3.IAmazonS3>()
+                        .ConfigureAwsServices(configuration)
                         .AddHostedService<Startup>();
                 });
     }

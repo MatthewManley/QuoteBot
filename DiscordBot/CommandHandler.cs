@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using DiscordBot.Modules;
 using Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,17 +20,20 @@ namespace DiscordBot
         private Dictionary<string, MethodInfo> commands = null;
         private readonly IServerRepo serverRepo;
         private readonly IQuoteBotRepo quoteBotRepo;
+        private readonly IHostEnvironment hostEnvironment;
 
         public CommandHandler(
             DiscordSocketClient client,
             IServiceProvider serviceProvider,
             IServerRepo serverRepo,
-            IQuoteBotRepo quoteBotRepo)
+            IQuoteBotRepo quoteBotRepo,
+            IHostEnvironment hostEnvironment)
         {
             this.serverRepo = serverRepo;
             this.quoteBotRepo = quoteBotRepo;
             this.serviceProvider = serviceProvider;
             _client = client;
+            this.hostEnvironment = hostEnvironment;
         }
 
         public void InitializeAsync()
@@ -119,7 +123,15 @@ namespace DiscordBot
             if (!(message.Channel is IGuildChannel guildChannel))
                 return (false, argPos);
 
-            var prefix = (await serverRepo.GetServerPrefix(guildChannel.GuildId))?.Trim();
+            string prefix;
+            if (hostEnvironment.IsDevelopment())
+            {
+                prefix = ">";
+            }
+            else
+            {
+                prefix = (await serverRepo.GetServerPrefix(guildChannel.GuildId))?.Trim();
+            }
 
             if (string.IsNullOrWhiteSpace(prefix))
             {

@@ -17,7 +17,7 @@ namespace Aws
     {
         private const string V = "key";
 
-        public static void ConfigureAwsServices(this IServiceCollection serviceCollection, IConfiguration configuration)
+        public static IServiceCollection ConfigureAwsServices(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             serviceCollection.AddDefaultAWSOptions(configuration.GetAWSOptions());
             serviceCollection.AddAWSService<IAmazonDynamoDB>();
@@ -30,6 +30,8 @@ namespace Aws
             serviceCollection.AddTransient<IAudioRepo, AudioRepo>();
             serviceCollection.AddTransient<IAudioCategoryRepo, AudioCategoryRepo>();
             serviceCollection.AddTransient<ICategoryRepo, CategoryRepo>();
+            serviceCollection.AddTransient<IServerRepo, ServerRepo>();
+            return serviceCollection;
         }
 
         public static void AddAuthMiddleware(this IApplicationBuilder app)

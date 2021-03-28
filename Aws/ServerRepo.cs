@@ -1,13 +1,13 @@
 ﻿using Domain.Repositories;
 using System.Threading.Tasks;
 
-namespace Infrastructure
+namespace Aws
 {
-    public class FakeServerRepo : IServerRepo
+    public class ServerRepo : IServerRepo
     {
         public Task<string> GetServerPrefix(ulong serverId)
         {
-            return Task.FromResult(">");
+            return Task.FromResult<string>(null);
         }
     }
 }

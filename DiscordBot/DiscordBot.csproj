@@ -28,7 +28,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Aws\Aws.csproj" />
     <ProjectReference Include="..\Domain\Domain.csproj" />
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Migrations/*" CopyToOutputDirectory="Always" />
