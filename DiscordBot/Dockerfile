@@ -8,7 +8,6 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
 WORKDIR /src
 COPY ["DiscordBot/DiscordBot.csproj", "DiscordBot/"]
 COPY ["Domain/Domain.csproj", "Domain/"]
-COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
 RUN dotnet restore "DiscordBot/DiscordBot.csproj"
 COPY . .
 WORKDIR "/src/DiscordBot"
