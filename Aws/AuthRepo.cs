@@ -77,11 +77,7 @@ namespace Aws
 
         private Table GetAuthTable()
         {
-            if (Table.TryLoadTable(dynamoDbClient, "quotebot-auth", out var table))
-            {
-                return table;
-            }
-            throw new Exception();
+            return Table.LoadTable(dynamoDbClient, "quotebot-auth");
         }
     }
 }
