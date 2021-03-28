@@ -9,10 +9,11 @@ namespace Discord
 {
     public static class Extensions
     {
-        public static void ConfigureDiscordServices(this IServiceCollection serviceCollection, IConfiguration configuration)
+        public static IServiceCollection ConfigureDiscordServices(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             serviceCollection.Configure<DiscordOptions>(configuration.GetSection("Discord"));
             serviceCollection.AddHttpClient<IDiscordHttp, DiscordHttp>();
+            return serviceCollection;
         }
 
         public static async Task<T> ReadAsObjectAsync<T>(this HttpContent content)

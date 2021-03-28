@@ -18,6 +18,11 @@ namespace QuoteBotWeb
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((hostContext, builder) =>
+                {
+                    var environment = hostContext.HostingEnvironment;
+                    builder.AddSystemsManager($"/QuoteBot/{environment.EnvironmentName}/");
+                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();

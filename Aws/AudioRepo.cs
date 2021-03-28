@@ -51,7 +51,7 @@ namespace Aws
             };
         }
 
-        public async Task<string> GetFileFromPath(string path)
+        public Task<string> GetFileFromPath(string path)
         {
             var request = new GetPreSignedUrlRequest
             {
@@ -61,7 +61,7 @@ namespace Aws
                 Protocol = Protocol.HTTPS,
                 Verb = HttpVerb.GET,
             };
-            return s3Client.GetPreSignedURL(request);
+            return Task.FromResult(s3Client.GetPreSignedURL(request));
         }
 
         public async Task UploadFile(string filePath, string key)
