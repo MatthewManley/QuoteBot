@@ -348,7 +348,7 @@ namespace DiscordBot.Modules
         private async Task Play(IVoiceChannel vc, Audio audio, CancellationToken cancellationToken)
         {
 
-            using var s3object = await s3Client.GetObjectAsync("quotebot-audio", audio.Path, cancellationToken);
+            using var s3object = await s3Client.GetObjectAsync("quotebot-audio-post", audio.Path, cancellationToken);
             using var ffmpeg = CreateStream();
             using var output = ffmpeg.StandardOutput.BaseStream;
             var inputTask = Task.Run(async () =>
