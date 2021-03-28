@@ -3,6 +3,7 @@ using Amazon.S3.Model;
 using Dapper;
 using Domain.Models;
 using Domain.Repositories;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,11 +17,13 @@ namespace Aws
     {
         private readonly IAmazonS3 s3Client;
         private readonly DbConnectionFactory dbConnectionFactory;
+        private readonly IOptions<S3Options> s3Options;
 
-        public AudioRepo(IAmazonS3 amazonS3Client, DbConnectionFactory dbConnectionFactory)
+        public AudioRepo(IAmazonS3 amazonS3Client, DbConnectionFactory dbConnectionFactory, IOptions<S3Options> s3Options)
         {
             s3Client = amazonS3Client;
             this.dbConnectionFactory = dbConnectionFactory;
+            this.s3Options = s3Options;
         }
 
         public async Task<Audio> GetAudioById(uint Id)
@@ -53,6 +56,8 @@ namespace Aws
 
         public Task<string> GetFileFromPath(string path)
         {
+            var options = s3Options.Value;
+            var signClient = new AmazonS3Client(options.AccessKeyId, options.AccessKeySecret, Amazon.RegionEndpoint.USEast1);
             var request = new GetPreSignedUrlRequest
             {
                 BucketName = "quotebot-audio-post",
@@ -61,7 +66,7 @@ namespace Aws
                 Protocol = Protocol.HTTPS,
                 Verb = HttpVerb.GET,
             };
-            return Task.FromResult(s3Client.GetPreSignedURL(request));
+            return Task.FromResult(signClient.GetPreSignedURL(request));
         }
 
         public async Task UploadFile(string filePath, string key)
