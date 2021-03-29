@@ -1,4 +1,15 @@
-﻿@model QuoteBotWeb.Models.Guild.CategoriesViewModel
+﻿@model QuoteBotWeb.Models.Categories.IndexViewModel
+@{
+    var createCategoryUrl = $"/Guild/{Model.Server}/Category/Create";
+}
+<form action="@createCategoryUrl" method="post">
+    <div class="form-group">
+        <label for="name">Category Name</label>
+        <input type="text" class="form-control" id="name" name="name">
+    </div>
+    <input type="submit" class="btn btn-primary">Create Category</input>
+</form>
+
 
 @foreach (var (category, quotes) in Model.Categories)
 {

@@ -15,23 +15,20 @@ namespace QuoteBotWeb.Controllers
 {
     public class GuildController : Controller
     {
-        private readonly IDiscordHttp discordHttp;
-        private readonly IMemoryCache memoryCache;
         private readonly IQuoteBotRepo quoteBotRepo;
         private readonly IAudioOwnerRepo audioOwnerRepo;
         private readonly IAudioProcessingService audioProcessingService;
+        private readonly IUserService userService;
 
-        public GuildController(IDiscordHttp discordHttp,
-                               IMemoryCache memoryCache,
-                               IQuoteBotRepo quoteBotRepo,
+        public GuildController(IQuoteBotRepo quoteBotRepo,
                                IAudioOwnerRepo audioOwnerRepo,
-                               IAudioProcessingService audioProcessingService)
+                               IAudioProcessingService audioProcessingService,
+                               IUserService userService)
         {
-            this.discordHttp = discordHttp;
-            this.memoryCache = memoryCache;
             this.quoteBotRepo = quoteBotRepo;
             this.audioOwnerRepo = audioOwnerRepo;
             this.audioProcessingService = audioProcessingService;
+            this.userService = userService;
         }
 
         public async Task<IActionResult> Index()
@@ -42,57 +39,12 @@ namespace QuoteBotWeb.Controllers
                 return Redirect("/login");
             }
 
-            var userGuilds = await GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetUserGuilds(authEntry);
             var viewmodel = new Models.Guild.IndexViewModel
             {
                 Guilds = userGuilds
             };
             return View(viewmodel);
-        }
-
-        //TODO: should be a service
-        private async Task<List<UserGuild>> GetUserGuilds(AuthEntry authEntry)
-        {
-            var guilds = await memoryCache.GetOrCreateAsync($"userguilds={authEntry.UserId}", async (cacheEntry) =>
-            {
-                cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(3);
-                return await discordHttp.GetCurrentUserGuilds(authEntry.AccessToken);
-            });
-            var validGuilds = guilds.Where(x => x.Owner || (x.PermissionsInt & (uint)Permissions.Administrator) == (uint)Permissions.Administrator).ToList();
-            return validGuilds;
-        }
-
-        [Route("{controller}/{server}/{action}")]
-        public async Task<IActionResult> Categories(string server)
-        {
-            var authEntry = (AuthEntry)HttpContext.Items["key"];
-            if (authEntry is null)
-            {
-                return Redirect("/login");
-            }
-            if (!ulong.TryParse(server, out var serverId))
-            {
-                return BadRequest();
-            }
-            var userGuilds = await GetUserGuilds(authEntry);
-            if (!userGuilds.Any(x => x.Id == serverId))
-            {
-                return Unauthorized();
-            }
-            var audio_owners = await audioOwnerRepo.GetAudioOwnersByOwner(serverId);
-            var categories = await quoteBotRepo.GetCategoriesByOwner(serverId);
-            var pairs = await quoteBotRepo.GetAudioCategoriesByOwner(serverId);
-            var paired_quotes = pairs.Join(audio_owners, pair => pair.AudioOwnerId, quote => quote.Id, (pair, quote) => (pair, quote));
-            var result = categories.GroupJoin(paired_quotes,
-                category => category.Id,
-                pair => pair.pair.CategoryId,
-                (category, pairs) => (category, pairs.Select(x => x.quote).ToList())
-            ).OrderBy(x => x.category.Name).ToList();
-            return View(new Models.Guild.CategoriesViewModel
-            {
-                Categories = result,
-                AllAudio = audio_owners.ToList()
-            });
         }
 
         [Route("{controller}/{server}/{action}")]
@@ -108,7 +60,7 @@ namespace QuoteBotWeb.Controllers
             {
                 return BadRequest();
             }
-            var userGuilds = await GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == serverId))
             {
                 return Unauthorized();

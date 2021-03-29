@@ -1,6 +1,7 @@
 ﻿using Discord.Responses;
 using Domain.Models;
 using Domain.Repositories;
+using Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -16,20 +17,17 @@ namespace QuoteBotWeb.Controllers
         private readonly IAudioCategoryRepo audioCategoryRepo;
         private readonly IAudioOwnerRepo audioOwnerRepo;
         private readonly ICategoryRepo categoryRepo;
-        private readonly IMemoryCache memoryCache;
-        private readonly IDiscordHttp discordHttp;
+        private readonly IUserService userService;
 
         public AudioCategoryController(IAudioCategoryRepo audioCategoryRepo,
                                        IAudioOwnerRepo audioOwnerRepo,
                                        ICategoryRepo categoryRepo,
-                                       IMemoryCache memoryCache,
-                                       IDiscordHttp discordHttp)
+                                       IUserService userService)
         {
             this.audioCategoryRepo = audioCategoryRepo;
             this.audioOwnerRepo = audioOwnerRepo;
             this.categoryRepo = categoryRepo;
-            this.memoryCache = memoryCache;
-            this.discordHttp = discordHttp;
+            this.userService = userService;
         }
 
         public async Task<IActionResult> Create([FromQuery(Name = "audio")] uint audioOwnerId,
@@ -52,7 +50,7 @@ namespace QuoteBotWeb.Controllers
             }
 
             // ensure the user has permissions to edit the guild
-            var userGuilds = await GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == audioOwner.OwnerId))
             {
                 return Unauthorized();
@@ -82,7 +80,7 @@ namespace QuoteBotWeb.Controllers
             }
 
             // ensure the user has permissions to edit the guild
-            var userGuilds = await GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == audioOwner.OwnerId))
             {
                 return Unauthorized();
@@ -91,17 +89,6 @@ namespace QuoteBotWeb.Controllers
             await audioCategoryRepo.Delete(audioOwnerId, categoryId);
 
             return string.IsNullOrWhiteSpace(redirect) ? LocalRedirect("/") : LocalRedirect(redirect);
-        }
-
-        private async Task<List<Domain.Models.UserGuild>> GetUserGuilds(AuthEntry authEntry)
-        {
-            var guilds = await memoryCache.GetOrCreateAsync($"userguilds={authEntry.UserId}", async (cacheEntry) =>
-            {
-                cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(3);
-                return await discordHttp.GetCurrentUserGuilds(authEntry.AccessToken);
-            });
-            var validGuilds = guilds.Where(x => x.Owner || (x.PermissionsInt & (uint)Permissions.Administrator) == (uint)Permissions.Administrator).ToList();
-            return validGuilds;
         }
     }
 }

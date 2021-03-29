@@ -1,5 +1,6 @@
 ﻿using Domain.Models;
 using Domain.Repositories;
+using Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using System;
@@ -13,15 +14,18 @@ namespace QuoteBotWeb.Controllers
     {
         private readonly IAudioRepo audioRepo;
         private readonly IMemoryCache memoryCache;
-        private readonly IDiscordHttp discordHttp;
         private readonly IAudioOwnerRepo audioOwnerRepo;
+        private readonly IUserService userService;
 
-        public AudioController(IAudioRepo audioRepo, IMemoryCache memoryCache, IDiscordHttp discordHttp, IAudioOwnerRepo audioOwnerRepo)
+        public AudioController(IAudioRepo audioRepo,
+                               IMemoryCache memoryCache,
+                               IAudioOwnerRepo audioOwnerRepo,
+                               IUserService userService)
         {
             this.audioRepo = audioRepo;
             this.memoryCache = memoryCache;
-            this.discordHttp = discordHttp;
             this.audioOwnerRepo = audioOwnerRepo;
+            this.userService = userService;
         }
 
         [Route("{controller}/{id}")]
@@ -44,7 +48,7 @@ namespace QuoteBotWeb.Controllers
 
         public async Task<bool> IsAllowedAudio(AuthEntry authEntry, uint id)
         {
-            var guildsTask = GetUserGuilds(authEntry);
+            var guildsTask = userService.GetUserGuilds(authEntry);
             var audioOwnersTask = memoryCache.GetOrCreateAsync($"GetAudioOwnersByAudio({id})",
                 async (cacheEntry) =>
                 {
@@ -54,18 +58,6 @@ namespace QuoteBotWeb.Controllers
             await Task.WhenAll(guildsTask, audioOwnersTask);
             var ownerIds = guildsTask.Result.Select(x => x.Id).Concat(authEntry.UserId.Yield()).ToList();
             return ownerIds.Join(audioOwnersTask.Result, ownerId => ownerId, ao => ao.OwnerId, (outer, inner) => (outer, inner)).Any();
-        }
-
-
-        private async Task<List<UserGuild>> GetUserGuilds(AuthEntry authEntry)
-        {
-            var guilds = await memoryCache.GetOrCreateAsync($"userguilds={authEntry.UserId}", async (cacheEntry) =>
-            {
-                cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(3);
-                return await discordHttp.GetCurrentUserGuilds(authEntry.AccessToken);
-            });
-            var validGuilds = guilds.Where(x => x.Owner || (x.PermissionsInt & (uint)Permissions.Administrator) == (uint)Permissions.Administrator).ToList();
-            return validGuilds;
         }
     }
 }

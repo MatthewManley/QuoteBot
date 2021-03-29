@@ -28,5 +28,24 @@ namespace Aws
             };
             return await dbConnection.QueryFirstAsync<Category>(cmdText, parameters);
         }
+
+        public async Task<Category> CreateCategory(string name, ulong owner)
+        {
+            using var dbConnection = await dbConnectionFactory.CreateConnection();
+            var cmdText = "INSERT INTO category (name, owner) VALUES (@name, @owner);";
+            var parameters = new
+            {
+                name = name,
+                owner = owner
+            };
+            await dbConnection.ExecuteAsync(cmdText, parameters);
+            var id = await dbConnection.ExecuteScalarAsync<uint>("SELECT LAST_INSERT_ID();");
+            return new Category
+            {
+                Id = id,
+                Name = name,
+                OwnerId = owner
+            };
+        }
     }
 }
