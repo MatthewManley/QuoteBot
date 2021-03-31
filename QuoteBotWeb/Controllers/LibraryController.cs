@@ -32,7 +32,7 @@ namespace QuoteBotWeb.Controllers
             var userAudio = await audioOwnerRepo.GetAudioOwnersByOwner(authEntry.UserId);
             return View(new IndexViewModel
             {
-                audioOwners = userAudio
+                audioOwners = userAudio,
             });
         }
 

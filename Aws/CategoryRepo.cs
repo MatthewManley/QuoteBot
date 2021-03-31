@@ -21,7 +21,7 @@ namespace Aws
         public async Task<Category> GetCategory(uint id)
         {
             using var dbConnection = await dbConnectionFactory.CreateConnection();
-            var cmdText = "SELECT id Id, name Name, owner OwnerId FROM category WHERE id = @id;";
+            var cmdText = "SELECT id Id, name Name, owner OwnerId FROM category WHERE id = @id LIMIT 1;";
             var parameters = new
             {
                 id = id
@@ -46,6 +46,28 @@ namespace Aws
                 Name = name,
                 OwnerId = owner
             };
+        }
+
+        public async Task DeleteCategory(uint id)
+        {
+            using var dbConnection = await dbConnectionFactory.CreateConnection();
+            var cmdText = "DELETE FROM category WHERE id = @id;";
+            var parameters = new
+            {
+                id = id,
+            };
+            await dbConnection.ExecuteAsync(cmdText, parameters);
+        }
+
+        public async Task<IEnumerable<Category>> GetCategoriesByOwner(ulong owner)
+        {
+            using var dbConnection = await dbConnectionFactory.CreateConnection();
+            var cmdText = "SELECT id Id, name Name, owner OwnerId FROM category WHERE owner = @owner;";
+            var parameters = new
+            {
+                owner = owner
+            };
+            return await dbConnection.QueryAsync<Category>(cmdText, parameters);
         }
     }
 }

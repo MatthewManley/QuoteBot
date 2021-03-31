@@ -1,0 +1,14 @@
+﻿@model QuoteBotWeb.Models.Categories.DeleteViewModel
+@{
+    var cancelUrl = $"/Guild/{Model.Server}/Categories";
+}
+<form method="post">
+    <div class="form-group">
+        <label for="confirm">Confirm you want to delete category "@Model.Category.Name"</label>
+        <input type="hidden" value="@Model.Category.Id" id="categoryId" name="categoryId" />
+        <input type="checkbox" class="form-control" id="confirm" name="confirm" value="true">
+        <input type="hidden" value="false" id="confirm" name="confirm">
+    </div>
+    <input type="submit" class="btn btn-danger" value="Delete Category" />
+</form>
+<a href="@cancelUrl" class="btn btn-primary">Cancel Delete</a>

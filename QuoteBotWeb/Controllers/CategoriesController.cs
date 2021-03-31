@@ -66,7 +66,24 @@ namespace QuoteBotWeb.Controllers
             });
         }
 
-        [HttpPost("Guild/{server}/Category/{action}")]
+        [HttpGet("Guild/{server}/Categories/Create")]
+        public async Task<IActionResult> Create([FromRoute] ulong server)
+        {
+            var authEntry = (AuthEntry)HttpContext.Items["key"];
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            if (!userGuilds.Any(x => x.Id == server))
+            {
+                return Unauthorized();
+            }
+
+            return View();
+        }
+
+        [HttpPost("Guild/{server}/Categories/Create")]
         public async Task<IActionResult> Create([FromRoute] ulong server, [FromForm] string name)
         {
             var authEntry = (AuthEntry)HttpContext.Items["key"];
@@ -86,6 +103,45 @@ namespace QuoteBotWeb.Controllers
             }
 
             await categoryRepo.CreateCategory(name, server);
+            return RedirectToAction("Index", new { server = server });
+        }
+
+        [HttpGet("Guild/{server}/Categories/Delete/{id}")]
+        public async Task<IActionResult> GetDelete([FromRoute] ulong server, [FromRoute] uint id)
+        {
+            var authEntry = (AuthEntry)HttpContext.Items["key"];
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var category = await categoryRepo.GetCategory(id);
+            if (!userGuilds.Any(x => x.Id == server) || category.OwnerId != server)
+            {
+                return Unauthorized();
+            }
+            return View("Delete", new DeleteViewModel(category, server));
+        }
+
+        [HttpPost("Guild/{server}/Categories/Delete/{id}")]
+        public async Task<IActionResult> PostDelete([FromRoute] ulong server, [FromRoute] uint id, [FromForm] bool confirm, uint categoryId)
+        {
+            var authEntry = (AuthEntry)HttpContext.Items["key"];
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+            if (!confirm || id != categoryId)
+            {
+                return BadRequest();
+            }
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var category = await categoryRepo.GetCategory(id);
+            if (category is null || !userGuilds.Any(x => x.Id == server) || category.OwnerId != server)
+            {
+                return Unauthorized();
+            }
+            await categoryRepo.DeleteCategory(id);
             return RedirectToAction("Index", new { server = server });
         }
     }

@@ -1,19 +1,12 @@
 ﻿@model QuoteBotWeb.Models.Categories.IndexViewModel
 @{
-    var createCategoryUrl = $"/Guild/{Model.Server}/Category/Create";
+    var createUrl = $"/Guild/{Model.Server}/Categories/Create";
 }
-<form action="@createCategoryUrl" method="post">
-    <div class="form-group">
-        <label for="name">Category Name</label>
-        <input type="text" class="form-control" id="name" name="name">
-    </div>
-    <input type="submit" class="btn btn-primary">Create Category</input>
-</form>
-
-
+<a href="@createUrl" class="btn btn-primary">Create New Category</a>
 @foreach (var (category, quotes) in Model.Categories)
 {
     var categoryCollapse = $"collapse{category.Id}";
+    var deleteUrl = $"/Guild/{Model.Server}/Categories/Delete/{category.Id}";
     <div class="row">
         <div class="col">@category.Name</div>
         <div class="col">
@@ -23,7 +16,7 @@
             <a class="btn btn-warning" href="/">Edit Category</a>
         </div>
         <div class="col">
-            <a class="btn btn-danger" href="/">Delete Category</a>
+            <a class="btn btn-danger" href="@deleteUrl">Delete Category</a>
         </div>
     </div>
     <div class="collapse" id="@categoryCollapse">
