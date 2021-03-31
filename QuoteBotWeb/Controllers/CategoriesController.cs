@@ -26,16 +26,6 @@ namespace QuoteBotWeb.Controllers
             this.categoryRepo = categoryRepo;
         }
 
-        public IActionResult Index()
-        {
-            var authEntry = (AuthEntry)HttpContext.Items["key"];
-            if (authEntry is null)
-            {
-                return Redirect("/login");
-            }
-            return RedirectToAction("Index", "Guild");
-        }
-
         [Route("Guild/{server}/Categories")]
         public async Task<IActionResult> Index(ulong server)
         {

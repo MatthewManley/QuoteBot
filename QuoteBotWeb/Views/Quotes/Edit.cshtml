@@ -1,10 +1,10 @@
-﻿@model QuoteBotWeb.Models.Guild.EditQuoteViewModel
+﻿@model QuoteBotWeb.Models.Quotes.EditViewModel
 
 <div>
     @Model.NamedAudio.AudioOwner.Name
     <form method="post" action="">
-        <input type="text" value="@Model.NamedAudio.AudioOwner.Name"/>
-        <input type="submit" class="btn btn-primary" value="Rename"/>
+        <input type="text" value="@Model.NamedAudio.AudioOwner.Name" />
+        <input type="submit" class="btn btn-primary" value="Rename" />
     </form>
 </div>
 <h1>Categories</h1>
@@ -21,8 +21,8 @@
 {
     var redirectUri = $"/AudioCategory/Create?audio={Model.NamedAudio.AudioOwner.Id}&category={category.Id}&redirect=/Guild/{Model.Server}/Quotes/{Model.Quote}";
 
-<div>
-    <span>@category.Name</span>
-    <a class="btn btn-success" href="@redirectUri">Add</a>
-</div>
+    <div>
+        <span>@category.Name</span>
+        <a class="btn btn-success" href="@redirectUri">Add</a>
+    </div>
 }
