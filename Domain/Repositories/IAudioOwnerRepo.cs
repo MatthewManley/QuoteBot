@@ -10,5 +10,6 @@ namespace Domain.Repositories
         Task<IEnumerable<AudioOwner>> GetAudioOwnersByOwner(ulong ownerId);
         Task<AudioOwner> CreateAudioOwner(uint audioId, ulong ownerId, string name);
         Task<AudioOwner> GetById(uint id);
+        Task Delete(uint id);
     }
 }

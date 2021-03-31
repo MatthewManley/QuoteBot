@@ -1,5 +1,10 @@
 ﻿@model QuoteBotWeb.Models.Quotes.IndexViewModel
-
+@{ 
+    var uploadUrl = $"/Guild/{Model.Server}/Quotes/Upload";
+}
+<div class="row">
+    <a href="@uploadUrl" class="btn btn-primary">Upload New Quote</a>
+</div>
 <div class="row row-cols-3">
     <svg width="0" height="0">
         <defs>
@@ -14,6 +19,8 @@
     @foreach (var (quote, categoryList) in Model.Quotes)
     {
         var audioPath = $"/Audio/{quote.AudioId}";
+        var editPath = $"/Guild/{Model.Server}/Quotes/{quote.Id}";
+        var deletePath = $"/Guild/{Model.Server}/Quotes/{quote.Id}/Delete";
         <div class="col">
             <div class="quote-box">
                 <audio preload="none" id="audio-@quote.AudioId">
@@ -28,13 +35,13 @@
                         </svg>
                         <span>Play</span>
                     </button>
-                    <a href="/Guild/@Model.Server/Quotes/@quote.Id" class="btn btn-outline-warning">
+                    <a href="@editPath" class="btn btn-outline-warning">
                         <svg width="16" height="16" viewBox="0 0 16 16" class="edit-symbol">
                             <use href="#edit" />
                         </svg>
                         <span>Edit</span>
                     </a>
-                    <a href="/" class="btn btn-outline-danger">
+                    <a href="@deletePath" class="btn btn-outline-danger">
                         <svg width="16" height="16" viewBox="0 0 16 16" class="trash-symbol">
                             <use href="#trash" />
                         </svg>

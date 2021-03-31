@@ -114,7 +114,7 @@ namespace QuoteBotWeb.Controllers
         }
 
         [HttpPost("Guild/{server}/Categories/Delete/{id}")]
-        public async Task<IActionResult> PostDelete([FromRoute] ulong server, [FromRoute] uint id, [FromForm] bool confirm, uint categoryId)
+        public async Task<IActionResult> PostDelete([FromRoute] ulong server, [FromRoute] uint id, [FromForm] bool confirm, [FromForm] uint categoryId)
         {
             var authEntry = (AuthEntry)HttpContext.Items["key"];
             if (authEntry is null)

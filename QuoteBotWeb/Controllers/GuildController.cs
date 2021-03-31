@@ -46,29 +46,5 @@ namespace QuoteBotWeb.Controllers
             };
             return View(viewmodel);
         }
-
-        [HttpGet("{controller}/{server}/{action}")]
-        public IActionResult Upload()
-        {
-            return View();
-        }
-
-        [HttpPost("{controller}/{server}/{action}")]
-        public async Task<IActionResult> Upload([FromForm]UploadFileForm uploadFileForm, [FromRoute]string server)
-        {
-            if (!ulong.TryParse(server, out var serverId))
-            {
-                return BadRequest();
-            }
-            //var token = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
-            var token = CancellationToken.None;
-            var authEntry = HttpContext.GetAuthEntry();
-            if (authEntry is null)
-            {
-                return Redirect("/login");
-            }
-            await audioProcessingService.Upload(uploadFileForm.File, token, serverId, authEntry.UserId, uploadFileForm.Name);
-            return Ok();
-        }
     }
 }

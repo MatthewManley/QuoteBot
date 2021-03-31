@@ -46,7 +46,7 @@ namespace QuoteBotWeb.Controllers
             return Redirect(str);
         }
 
-        public async Task<bool> IsAllowedAudio(AuthEntry authEntry, uint id)
+        private async Task<bool> IsAllowedAudio(AuthEntry authEntry, uint id)
         {
             var guildsTask = userService.GetUserGuilds(authEntry);
             var audioOwnersTask = memoryCache.GetOrCreateAsync($"GetAudioOwnersByAudio({id})",

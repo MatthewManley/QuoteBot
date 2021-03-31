@@ -1,7 +1,12 @@
 ﻿using Domain.Repositories;
 using Domain.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using QuoteBotWeb.Models;
+using QuoteBotWeb.Models.Quotes;
+using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace QuoteBotWeb.Controllers
@@ -10,14 +15,17 @@ namespace QuoteBotWeb.Controllers
     {
         private readonly IAudioOwnerRepo audioOwnerRepo;
         private readonly IUserService userService;
+        private readonly IAudioProcessingService audioProcessingService;
         private readonly IQuoteBotRepo quoteBotRepo;
 
-        public QuotesController(IAudioOwnerRepo audioOwnerRepo, 
+        public QuotesController(IAudioOwnerRepo audioOwnerRepo,
                                 IUserService userService,
+                                IAudioProcessingService audioProcessingService,
                                 IQuoteBotRepo quoteBotRepo)
         {
             this.audioOwnerRepo = audioOwnerRepo;
             this.userService = userService;
+            this.audioProcessingService = audioProcessingService;
             this.quoteBotRepo = quoteBotRepo;
         }
 
@@ -82,6 +90,104 @@ namespace QuoteBotWeb.Controllers
 
             var viewModel = new Models.Quotes.EditViewModel(named_audio, in_category, not_in_category, server, quote);
             return View(viewModel);
+        }
+
+        [HttpGet("Guild/{server}/Quotes/Upload")]
+        public async Task<IActionResult> Upload([FromRoute] ulong server)
+        {
+            var authEntry = HttpContext.GetAuthEntry();
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            if (!userGuilds.Any(x => x.Id == server))
+            {
+                return Unauthorized();
+            }
+
+            return View();
+        }
+
+        [HttpPost("Guild/{server}/Quotes/Upload")]
+        public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] string name, [FromRoute] ulong server)
+        {
+            var token = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
+            var authEntry = HttpContext.GetAuthEntry();
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+
+            if (name.Length < 4)
+            {
+                return BadRequest();
+            }
+
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            if (!userGuilds.Any(x => x.Id == server))
+            {
+                return Unauthorized();
+            }
+
+            await audioProcessingService.Upload(file, token, server, authEntry.UserId, name);
+            return RedirectToAction("Index", new { server = server });
+        }
+
+
+        [HttpGet("Guild/{server}/Quotes/{quote}/Delete")]
+        public async Task<IActionResult> Delete([FromRoute] ulong server, [FromRoute] uint quote)
+        {
+            var authEntry = HttpContext.GetAuthEntry();
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            if (!userGuilds.Any(x => x.Id == server))
+            {
+                return Unauthorized();
+            }
+
+            var named_audio = await quoteBotRepo.GetNamedAudioByAudioOwnerId(quote);
+
+            if (named_audio.AudioOwner.OwnerId != server)
+            {
+                return BadRequest();
+            }
+            var viewModel = new DeleteViewModel(named_audio, server);
+            return View(viewModel);
+        }
+
+        [HttpPost("Guild/{server}/Quotes/{quote}/Delete")]
+        public async Task<IActionResult> Delete([FromRoute] ulong server, [FromRoute] uint quote, [FromForm] bool confirm, [FromForm] uint quoteId)
+        {
+            var authEntry = HttpContext.GetAuthEntry();
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+
+            if (!confirm || quote != quoteId)
+            {
+                return BadRequest();
+            }
+
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            if (!userGuilds.Any(x => x.Id == server))
+            {
+                return Unauthorized();
+            }
+
+            var named_audio = await quoteBotRepo.GetNamedAudioByAudioOwnerId(quote);
+            if (named_audio is null || named_audio.AudioOwner.OwnerId != server)
+            {
+                return BadRequest();
+            }
+            await audioOwnerRepo.Delete(quote);
+            return RedirectToAction("Index", new { server = server });
         }
     }
 }

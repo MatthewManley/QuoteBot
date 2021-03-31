@@ -70,5 +70,16 @@ namespace Aws
             };
             return result;
         }
+
+        public async Task Delete(uint id)
+        {
+            using var dbConnection = await dbConnectionFactory.CreateConnection();
+            var cmdText = "DELETE FROM audio_owner WHERE id = @id";
+            var parameters = new
+            {
+                id = id
+            };
+            await dbConnection.ExecuteAsync(cmdText, parameters);
+        }
     }
 }
