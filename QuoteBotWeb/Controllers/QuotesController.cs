@@ -120,19 +120,38 @@ namespace QuoteBotWeb.Controllers
                 return Redirect("/login");
             }
 
-            if (name.Length < 4)
-            {
-                return BadRequest();
-            }
-
             var userGuilds = await userService.GetUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
             }
 
-            await audioProcessingService.Upload(file, token, server, authEntry.UserId, name);
+            if (!ValidateName(name, out var cleanedName))
+            {
+                return BadRequest("Invalid quote name");
+            }
+
+            await audioProcessingService.Upload(file, token, server, authEntry.UserId, cleanedName);
             return RedirectToAction("Index", new { server = server });
+        }
+
+        private bool ValidateName(string name, out string cleaned)
+        {
+            cleaned = name;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+            cleaned = cleaned.Trim();
+            if (cleaned.Length < 1 || cleaned.Length > 64)
+            {
+                return false;
+            }
+            if (!cleaned.All(x => char.IsLetterOrDigit(x) || x == '-' || x == '_'))
+            {
+                return false;
+            }
+            return true;
         }
 
 

@@ -87,13 +87,32 @@ namespace QuoteBotWeb.Controllers
                 return Unauthorized();
             }
 
-            if (string.IsNullOrWhiteSpace(name) || name.Length < 4 || !name.All(x => char.IsLetterOrDigit(x) || x == '_' || x == '-'))
+            if (!ValidateName(name, out var cleanedName))
             {
-                return BadRequest();
+                return BadRequest("Invalid category name");
             }
 
-            await categoryRepo.CreateCategory(name, server);
+            await categoryRepo.CreateCategory(cleanedName, server);
             return RedirectToAction("Index", new { server = server });
+        }
+
+        private bool ValidateName(string name, out string cleaned)
+        {
+            cleaned = name;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+            cleaned = cleaned.Trim();
+            if (cleaned.Length < 1 || cleaned.Length > 64)
+            {
+                return false;
+            }
+            if (!cleaned.All(x => char.IsLetterOrDigit(x) || x == '-' || x == '_'))
+            {
+                return false;
+            }
+            return true;
         }
 
         [HttpGet("Guild/{server}/Categories/Delete/{id}")]
