@@ -108,10 +108,10 @@ namespace QuoteBotWeb.Controllers
             {
                 return false;
             }
-            if (!cleaned.All(x => char.IsLetterOrDigit(x) || x == '-' || x == '_' || x == ':'))
-            {
-                return false;
-            }
+            //if (!cleaned.All(x => char.IsLetterOrDigit(x) || x == '-' || x == '_' || x == ':'))
+            //{
+            //    return false;
+            //}
             return true;
         }
 
