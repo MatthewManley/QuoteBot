@@ -5,10 +5,11 @@ using Discord.WebSocket;
 using DiscordBot.Modules;
 using DiscordBot.Services;
 using Domain.Options;
-using Domain.Repositories;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
 
 namespace DiscordBot
 {
@@ -25,6 +26,7 @@ namespace DiscordBot
                 .ConfigureAppConfiguration((hostContext, builder) =>
                 {
                     var environment = hostContext.HostingEnvironment;
+                    Console.WriteLine("environment: " + environment.EnvironmentName);
                     builder.AddSystemsManager($"/QuoteBot/{environment.EnvironmentName}/");
                     if (environment.IsDevelopment())
                     {
@@ -47,9 +49,12 @@ namespace DiscordBot
                         .AddTransient<InfoModule>()
                         .AddTransient<SoundModule>()
                         .AddSingleton<StatsService>()
-                        .AddAWSService<Amazon.S3.IAmazonS3>()
                         .ConfigureAwsServices(configuration)
                         .AddHostedService<Startup>();
+                })
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<WebStartup>();
                 });
     }
 }
