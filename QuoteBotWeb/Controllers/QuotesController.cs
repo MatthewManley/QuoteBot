@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using QuoteBotWeb.Models;
 using QuoteBotWeb.Models.Quotes;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,16 +18,22 @@ namespace QuoteBotWeb.Controllers
         private readonly IUserService userService;
         private readonly IAudioProcessingService audioProcessingService;
         private readonly IQuoteBotRepo quoteBotRepo;
+        private readonly ICategoryRepo categoryRepo;
+        private readonly IAudioCategoryRepo audioCategoryRepo;
 
         public QuotesController(IAudioOwnerRepo audioOwnerRepo,
                                 IUserService userService,
                                 IAudioProcessingService audioProcessingService,
-                                IQuoteBotRepo quoteBotRepo)
+                                IQuoteBotRepo quoteBotRepo,
+                                ICategoryRepo categoryRepo,
+                                IAudioCategoryRepo audioCategoryRepo)
         {
             this.audioOwnerRepo = audioOwnerRepo;
             this.userService = userService;
             this.audioProcessingService = audioProcessingService;
             this.quoteBotRepo = quoteBotRepo;
+            this.categoryRepo = categoryRepo;
+            this.audioCategoryRepo = audioCategoryRepo;
         }
 
         [Route("Guild/{server}/Quotes")]
@@ -107,11 +114,12 @@ namespace QuoteBotWeb.Controllers
                 return Unauthorized();
             }
 
-            return View();
+            var categories = await categoryRepo.GetCategoriesByOwner(server);
+            return View(new UploadViewModel(categories.OrderBy(x => x.Name).ToList()));
         }
 
         [HttpPost("Guild/{server}/Quotes/Upload")]
-        public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] string name, [FromRoute] ulong server)
+        public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] string name, [FromRoute] ulong server, [FromForm] List<uint> categories)
         {
             var token = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
             var authEntry = HttpContext.GetAuthEntry();
@@ -131,7 +139,15 @@ namespace QuoteBotWeb.Controllers
                 return BadRequest("Invalid quote name");
             }
 
-            await audioProcessingService.Upload(file, token, server, authEntry.UserId, cleanedName);
+            var audio_owner = await audioProcessingService.Upload(file, token, server, authEntry.UserId, cleanedName);
+            foreach (var categoryId in categories)
+            {
+                var category = await categoryRepo.GetCategory(categoryId);
+                if (category != null && category.OwnerId == server)
+                {
+                    await audioCategoryRepo.Create(audio_owner.Id, category.Id);
+                }
+            }
             return RedirectToAction("Index", new { server = server });
         }
 

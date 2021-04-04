@@ -1,4 +1,6 @@
-﻿<form method="post" enctype="multipart/form-data">
+﻿@model QuoteBotWeb.Models.Quotes.UploadViewModel
+
+<form method="post" enctype="multipart/form-data">
     <div class="form-group">
         <label for="name">Quote Name</label>
         <input type="text" class="form-control" id="name" name="name">
@@ -7,6 +9,17 @@
         <label for="file">Upload File</label>
         <input type="file" class="form-control" id="file" name="file">
         <small id="fileHelp" class="form-text text-muted">Formats: mp3, wav, opus, ogg, flac</small>
+    </div>
+    <div class="form-group">
+        <label>Categories</label>
+        @foreach (var category in Model.Categories)
+        {
+            var categoryHtml = $"category{category.Id}";
+            <div>
+                <input type="checkbox" id="@categoryHtml" name="categories" value="@category.Id" />
+                <label for="@categoryHtml">@category.Name</label>
+            </div>
+        }
     </div>
     <input type="submit" class="btn btn-primary" value="Upload" />
 </form>

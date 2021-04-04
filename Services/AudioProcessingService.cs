@@ -28,7 +28,7 @@ namespace Services
             this.audioOwnerRepo = audioOwnerRepo;
         }
 
-        public async Task Upload(IFormFile formFile, CancellationToken token, ulong owner, ulong uploader, string name)
+        public async Task<AudioOwner> Upload(IFormFile formFile, CancellationToken token, ulong owner, ulong uploader, string name)
         {
 
             if (formFile.Length > MaxFileLength)
@@ -115,7 +115,7 @@ namespace Services
 
                 await audioRepo.UploadFile(outputPath, fileName);
                 var audioId = await audioRepo.CreateAudio(fileName, uploader);
-                await audioOwnerRepo.CreateAudioOwner(audioId.Id, owner, name);
+                return await audioOwnerRepo.CreateAudioOwner(audioId.Id, owner, name);
 
             }
             //catch (Exception)

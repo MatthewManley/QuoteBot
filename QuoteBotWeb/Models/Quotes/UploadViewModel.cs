@@ -1,11 +1,15 @@
-﻿using System;
+﻿using Domain.Models;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace QuoteBotWeb.Models.Quotes
 {
     public class UploadViewModel
     {
+        public UploadViewModel(List<Category> categories)
+        {
+            Categories = categories;
+        }
+
+        public List<Category> Categories { get; }
     }
 }
