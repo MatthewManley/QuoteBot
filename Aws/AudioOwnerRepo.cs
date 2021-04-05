@@ -81,5 +81,17 @@ namespace Aws
             };
             await dbConnection.ExecuteAsync(cmdText, parameters);
         }
+
+        public async Task Rename(uint id, string newName)
+        {
+            using var dbConnection = await dbConnectionFactory.CreateConnection();
+            var cmdText = "UPDATE audio_owner SET name = @name WHERE id = @id;";
+            var parameters = new
+            {
+                name = newName,
+                id = id
+            };
+            await dbConnection.ExecuteAsync(cmdText, parameters);
+        }
     }
 }

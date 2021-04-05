@@ -134,7 +134,7 @@ namespace QuoteBotWeb.Controllers
                 return Unauthorized();
             }
 
-            if (!ValidateName(name, out var cleanedName))
+            if (!IsValidName(name, out var cleanedName))
             {
                 return BadRequest("Invalid quote name");
             }
@@ -151,7 +151,7 @@ namespace QuoteBotWeb.Controllers
             return RedirectToAction("Index", new { server = server });
         }
 
-        private bool ValidateName(string name, out string cleaned)
+        private bool IsValidName(string name, out string cleaned)
         {
             cleaned = name;
             if (string.IsNullOrWhiteSpace(name))
@@ -223,6 +223,42 @@ namespace QuoteBotWeb.Controllers
             }
             await audioOwnerRepo.Delete(quote);
             return RedirectToAction("Index", new { server = server });
+        }
+
+        [HttpPost("Guild/{server}/Quotes/{quote}/Rename")]
+        public async Task<IActionResult> Rename([FromRoute] ulong server, [FromRoute] uint quote, [FromForm(Name = "quoteId")] uint audioOwnerId, [FromForm] string name)
+        {
+            var authEntry = HttpContext.GetAuthEntry();
+            if (authEntry is null)
+            {
+                return Redirect("/login");
+            }
+
+            if (quote != audioOwnerId)
+            {
+                return BadRequest();
+            }
+
+            var userGuilds = await userService.GetUserGuilds(authEntry);
+            if (!userGuilds.Any(x => x.Id == server))
+            {
+                return Unauthorized();
+            }
+
+            var named_audio = await quoteBotRepo.GetNamedAudioByAudioOwnerId(quote);
+            if (named_audio is null || named_audio.AudioOwner.OwnerId != server)
+            {
+                return BadRequest();
+            }
+
+            if (!IsValidName(name, out var cleaned_name))
+            {
+                return BadRequest("Invalid quote name");
+            }
+
+            await audioOwnerRepo.Rename(quote, cleaned_name);
+
+            return RedirectToAction("Edit", new { server = server, quote = quote});
         }
     }
 }

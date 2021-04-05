@@ -11,5 +11,6 @@ namespace Domain.Repositories
         Task<AudioOwner> CreateAudioOwner(uint audioId, ulong ownerId, string name);
         Task<AudioOwner> GetById(uint id);
         Task Delete(uint id);
+        Task Rename(uint id, string newName);
     }
 }

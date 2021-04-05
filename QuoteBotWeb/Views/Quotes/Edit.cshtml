@@ -1,9 +1,12 @@
 ﻿@model QuoteBotWeb.Models.Quotes.EditViewModel
-
+@{ 
+    var renameUrl = $"/Guild/{Model.Server}/Quotes/{Model.NamedAudio.AudioOwner.Id}/Rename";
+}
 <div>
     @Model.NamedAudio.AudioOwner.Name
-    <form method="post" action="">
-        <input type="text" value="@Model.NamedAudio.AudioOwner.Name" />
+    <form method="post" action="@renameUrl">
+        <input type="text" name="name" value="@Model.NamedAudio.AudioOwner.Name" />
+        <input type="hidden" name="quoteId" value="@Model.NamedAudio.AudioOwner.Id" />
         <input type="submit" class="btn btn-primary" value="Rename" />
     </form>
 </div>
