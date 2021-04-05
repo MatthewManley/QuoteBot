@@ -78,13 +78,6 @@ namespace QuoteBotWeb.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        private IReadOnlyList<ulong> allowedUsers = new List<ulong>() {
-            107649869665046528, // matt
-            304785107821002762, // jimmy
-            173512340837367808, // milk
-            218600945372758016, // saxton
-        }; 
-
         [Route("oauth")]
         public async Task<IActionResult> OAuth(string code = null, string state = null)
         {
@@ -132,11 +125,6 @@ namespace QuoteBotWeb.Controllers
             if (!ulong.TryParse(userReponse.Id, out var userId))
             {
                 return BadRequest();
-            }
-
-            if (!allowedUsers.Contains(userId))
-            {
-                return Unauthorized();
             }
 
             var unixTime = now.AddSeconds(accessTokenResponse.ExpiresIn).ToUnixTime();
