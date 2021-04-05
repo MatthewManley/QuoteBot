@@ -68,6 +68,7 @@ namespace DiscordBot
             if (client.GetChannel(announceChannelId) is SocketTextChannel announceChannel)
             {
                 await announceChannel.SendMessageAsync("I just started up!");
+                await client.SetGameAsync("https://quotebot.xyz");
             }
             else
             {
