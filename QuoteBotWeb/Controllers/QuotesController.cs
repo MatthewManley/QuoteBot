@@ -159,7 +159,7 @@ namespace QuoteBotWeb.Controllers
                 return false;
             }
             cleaned = cleaned.Trim();
-            if (cleaned.Length < 1 || cleaned.Length > 64)
+            if (cleaned.Length < 1 || cleaned.Length > 64 || cleaned.Any(x => char.IsWhiteSpace(x)))
             {
                 return false;
             }
