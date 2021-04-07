@@ -34,7 +34,7 @@ namespace QuoteBotWeb.Controllers
             {
                 return Redirect("/login");
             }
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -64,7 +64,7 @@ namespace QuoteBotWeb.Controllers
             {
                 return Redirect("/login");
             }
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -81,7 +81,7 @@ namespace QuoteBotWeb.Controllers
             {
                 return Redirect("/login");
             }
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -123,7 +123,7 @@ namespace QuoteBotWeb.Controllers
             {
                 return Redirect("/login");
             }
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             var category = await categoryRepo.GetCategory(id);
             if (!userGuilds.Any(x => x.Id == server) || category.OwnerId != server)
             {
@@ -144,7 +144,7 @@ namespace QuoteBotWeb.Controllers
             {
                 return BadRequest();
             }
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             var category = await categoryRepo.GetCategory(id);
             if (category is null || !userGuilds.Any(x => x.Id == server) || category.OwnerId != server)
             {

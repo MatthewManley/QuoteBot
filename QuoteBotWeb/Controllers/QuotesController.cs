@@ -44,7 +44,7 @@ namespace QuoteBotWeb.Controllers
             {
                 return Redirect("/login");
             }
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -75,7 +75,7 @@ namespace QuoteBotWeb.Controllers
                 return Redirect("/login");
             }
 
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -108,7 +108,7 @@ namespace QuoteBotWeb.Controllers
                 return Redirect("/login");
             }
 
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -128,7 +128,7 @@ namespace QuoteBotWeb.Controllers
                 return Redirect("/login");
             }
 
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -180,7 +180,7 @@ namespace QuoteBotWeb.Controllers
                 return Redirect("/login");
             }
 
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -197,7 +197,7 @@ namespace QuoteBotWeb.Controllers
         }
 
         [HttpPost("Guild/{server}/Quotes/{quote}/Delete")]
-        public async Task<IActionResult> Delete([FromRoute] ulong server, [FromRoute] uint quote, [FromForm] bool confirm, [FromForm] uint quoteId)
+        public async Task<IActionResult> Delete([FromRoute] ulong server, [FromRoute] uint quote, [FromForm] bool confirm, [FromForm] uint quoteId, [FromQuery] string redirect)
         {
             var authEntry = HttpContext.GetAuthEntry();
             if (authEntry is null)
@@ -210,7 +210,7 @@ namespace QuoteBotWeb.Controllers
                 return BadRequest();
             }
 
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();
@@ -222,7 +222,14 @@ namespace QuoteBotWeb.Controllers
                 return BadRequest();
             }
             await audioOwnerRepo.Delete(quote);
-            return RedirectToAction("Index", new { server = server });
+            if (string.IsNullOrWhiteSpace(redirect))
+            {
+                return RedirectToAction("Index", new { server = server });
+            }
+            else
+            {
+                return LocalRedirect(redirect);
+            }
         }
 
         [HttpPost("Guild/{server}/Quotes/{quote}/Rename")]
@@ -239,7 +246,7 @@ namespace QuoteBotWeb.Controllers
                 return BadRequest();
             }
 
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == server))
             {
                 return Unauthorized();

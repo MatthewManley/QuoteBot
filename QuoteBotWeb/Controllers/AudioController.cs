@@ -48,7 +48,7 @@ namespace QuoteBotWeb.Controllers
 
         private async Task<bool> IsAllowedAudio(AuthEntry authEntry, uint id)
         {
-            var guildsTask = userService.GetUserGuilds(authEntry);
+            var guildsTask = userService.GetAllowedUserGuilds(authEntry);
             var audioOwnersTask = memoryCache.GetOrCreateAsync($"GetAudioOwnersByAudio({id})",
                 async (cacheEntry) =>
                 {

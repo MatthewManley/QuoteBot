@@ -50,7 +50,7 @@ namespace QuoteBotWeb.Controllers
             }
 
             // ensure the user has permissions to edit the guild
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == audioOwner.OwnerId))
             {
                 return Unauthorized();
@@ -80,7 +80,7 @@ namespace QuoteBotWeb.Controllers
             }
 
             // ensure the user has permissions to edit the guild
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             if (!userGuilds.Any(x => x.Id == audioOwner.OwnerId))
             {
                 return Unauthorized();

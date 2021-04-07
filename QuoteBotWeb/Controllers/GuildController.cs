@@ -39,7 +39,7 @@ namespace QuoteBotWeb.Controllers
                 return Redirect("/login");
             }
 
-            var userGuilds = await userService.GetUserGuilds(authEntry);
+            var userGuilds = await userService.GetAllowedUserGuilds(authEntry);
             var viewmodel = new Models.Guild.IndexViewModel
             {
                 Guilds = userGuilds
