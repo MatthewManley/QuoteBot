@@ -17,13 +17,14 @@
 {
     var categoryCollapse = $"collapse{category.Id}";
     var deleteUrl = $"/Guild/{Model.Server}/Categories/Delete/{category.Id}";
+    var editUrl = $"/Guild/{Model.Server}/Categories"; //TODO
     <div class="row">
         <div class="col">@category.Name</div>
         <div class="col">
             <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#@categoryCollapse">Quotes</button>
         </div>
         <div class="col">
-            <a class="btn btn-warning" href="/">Edit Category</a>
+            <a class="btn btn-warning" href="@editUrl">Edit Category</a>
         </div>
         <div class="col">
             <a class="btn btn-danger" href="@deleteUrl">Delete Category</a>
