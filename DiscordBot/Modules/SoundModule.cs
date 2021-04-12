@@ -313,7 +313,7 @@ namespace DiscordBot.Modules
             else
             {
                 var name = argument.ToLower();
-                voiceChannel = context.Guild.VoiceChannels.FirstOrDefault(x => x.Name.ToLower() == argument);
+                voiceChannel = context.Guild.VoiceChannels.FirstOrDefault(x => x.Name.ToLower() == name);
             }
             return !(voiceChannel is null);
 
