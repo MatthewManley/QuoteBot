@@ -18,9 +18,9 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("ping")]
-        public async Task Ping(SocketCommandContext context)
+        public async Task Ping(SocketCommandContext context, string[] command)
         {
-            await context.Reply("!Pong");
+            await context.Reply("Pong!");
         }
 
         private StringBuilder GetUptimeString()
@@ -62,7 +62,7 @@ namespace DiscordBot.Modules
 
 
         [MyCommand("stats")]
-        public async Task Stats(SocketCommandContext context)
+        public async Task Stats(SocketCommandContext context, string[] command)
         {
             var guilds = await discordClient.GetGuildsAsync();
             var builder = new StringBuilder();
@@ -78,7 +78,7 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("invite")]
-        public async Task Invite(SocketCommandContext context)
+        public async Task Invite(SocketCommandContext context, string[] commmand)
         {
             var app = await discordClient.GetApplicationInfoAsync();
             var invite = $"https://discordapp.com/api/oauth2/authorize?client_id={app.Id}&permissions=0&scope=bot";

@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Domain.Models;
 using Domain.Repositories;
+using Microsoft.Extensions.Options;
 using System;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -12,10 +13,12 @@ namespace Aws
     public class AuthRepo : IAuthRepo
     {
         private readonly IAmazonDynamoDB dynamoDbClient;
+        private readonly IOptions<DynamoDbOptions> dynamoDbOptions;
 
-        public AuthRepo(IAmazonDynamoDB dynamoDbClient)
+        public AuthRepo(IAmazonDynamoDB dynamoDbClient, IOptions<DynamoDbOptions> dynamoDbOptions)
         {
             this.dynamoDbClient = dynamoDbClient;
+            this.dynamoDbOptions = dynamoDbOptions;
         }
 
         public async Task<AuthEntry> CreateAuthEntry(AuthEntry entry)
@@ -77,7 +80,7 @@ namespace Aws
 
         private Table GetAuthTable()
         {
-            return Table.LoadTable(dynamoDbClient, "quotebot-auth");
+            return Table.LoadTable(dynamoDbClient, dynamoDbOptions.Value.AuthTable);
         }
     }
 }

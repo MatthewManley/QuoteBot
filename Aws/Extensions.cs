@@ -24,6 +24,7 @@ namespace Aws
             serviceCollection.AddAWSService<IAmazonS3>();
             serviceCollection.Configure<DbOptions>(configuration.GetSection("Database"));
             serviceCollection.Configure<S3Options>(configuration.GetSection("S3"));
+            serviceCollection.Configure<DynamoDbOptions>(configuration.GetSection("DynamoDb"));
             serviceCollection.AddTransient<IAuthRepo, AuthRepo>();
             serviceCollection.AddTransient<DbConnectionFactory>();
             serviceCollection.AddTransient<IQuoteBotRepo, QuoteBotRepo>();

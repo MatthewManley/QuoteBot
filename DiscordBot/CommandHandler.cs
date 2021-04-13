@@ -2,13 +2,16 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using DiscordBot.Modules;
+using Domain.Models;
 using Domain.Repositories;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DiscordBot
@@ -20,20 +23,21 @@ namespace DiscordBot
         private Dictionary<string, MethodInfo> commands = null;
         private readonly IServerRepo serverRepo;
         private readonly IQuoteBotRepo quoteBotRepo;
-        private readonly IHostEnvironment hostEnvironment;
+        private readonly IMemoryCache memoryCache;
+        private readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(5, 5);
 
         public CommandHandler(
             DiscordSocketClient client,
             IServiceProvider serviceProvider,
             IServerRepo serverRepo,
             IQuoteBotRepo quoteBotRepo,
-            IHostEnvironment hostEnvironment)
+            IMemoryCache memoryCache)
         {
             this.serverRepo = serverRepo;
             this.quoteBotRepo = quoteBotRepo;
+            this.memoryCache = memoryCache;
             this.serviceProvider = serviceProvider;
             _client = client;
-            this.hostEnvironment = hostEnvironment;
         }
 
         public void InitializeAsync()
@@ -46,6 +50,37 @@ namespace DiscordBot
                 .SelectMany(x => x)
                 .ToDictionary(x => ((MyCommand)x.GetCustomAttribute(typeof(MyCommand))).Name);
             _client.MessageReceived += HandleCommandAsyncWrapper;
+            _client.JoinedGuild += _client_JoinedGuild;
+            _client.GuildAvailable += _client_JoinedGuild;
+        }
+
+        private async Task _client_JoinedGuild(SocketGuild arg)
+        {
+            try
+            {
+                await semaphoreSlim.WaitAsync();
+                var serverConfig = await serverRepo.GetServerConfig(arg.Id);
+                if (serverConfig is null)
+                {
+                    serverConfig = new ServerConfig
+                    {
+                        ServerId = arg.Id,
+                        ModeratorRole = null,
+                        Prefix = null,
+                        TextChannelList = null,
+                        TextChannelListType = "BLOCK",
+                        VoiceChannelList = null,
+                        VoiceChannelListType = "BLOCK",
+                    };
+                    await serverRepo.PutServerConfig(serverConfig);
+                }
+                memoryCache.Set($"serverconfig={arg.Id}", serverConfig, TimeSpan.FromMinutes(5));
+            }
+            finally
+            {
+                semaphoreSlim.Release();
+            }
+
         }
 
         private IEnumerable<MethodInfo> GetCommandMethods(Type x)
@@ -81,8 +116,42 @@ namespace DiscordBot
             if (message.Source != MessageSource.User)
                 return;
 
+            // Get server config if the message is from a server
+            ulong? serverId = (message.Channel as SocketGuildChannel)?.Guild.Id;
+            ServerConfig serverConfig = null;
+            if (serverId.HasValue)
+            {
+                serverConfig = memoryCache.Get<ServerConfig>($"serverconfig={serverId}");
+                if (serverConfig == null)
+                {
+                    serverConfig = await serverRepo.GetServerConfig(serverId.Value);
+                    if (serverConfig == null)
+                        return;
+                    memoryCache.Set($"serverconfig={serverId}", serverConfig, TimeSpan.FromMinutes(5));
+                }
+
+                if (serverConfig.TextChannelListType == "BLOCK")
+                {
+                    if (serverConfig.TextChannelList.Contains(message.Channel.Id))
+                    {
+                        return;
+                    }
+                }
+                else if (serverConfig.TextChannelListType == "ALLOW")
+                {
+                    if (!serverConfig.TextChannelList.Contains(message.Channel.Id))
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    return;
+                }
+            }
+
             // determine if we think the user is trying to execute a command
-            var (hasPrefix, argPos) = await HasPrefix(message);
+            var (hasPrefix, argPos) = HasPrefix(message, serverConfig.Prefix);
             if (!hasPrefix)
                 return;
 
@@ -92,7 +161,7 @@ namespace DiscordBot
 
 
             //var context = new SocketCommandContext(_client, message);
-            if (commands.TryGetValue(command.First(), out var method))
+            if (commands.TryGetValue(command.First().ToLowerInvariant(), out var method))
             {
                 var context = new SocketCommandContext(_client, message);
                 var parent = serviceProvider.GetRequiredService(method.DeclaringType);
@@ -101,10 +170,10 @@ namespace DiscordBot
             }
             
             // Sounds can only be played in a guild
-            if (!(message.Channel is SocketGuildChannel guildChannel))
+            if (serverId.HasValue)
                 return;
 
-            var categories = await quoteBotRepo.GetCategoriesWithAudio(guildChannel.Guild.Id);
+            var categories = await quoteBotRepo.GetCategoriesWithAudio(serverId.Value);
             if (categories.Select(x => x.Name).Contains(command.First()))
             {
                 var context = new SocketCommandContext(_client, message);
@@ -114,31 +183,23 @@ namespace DiscordBot
             }
         }
 
-        private async Task<(bool, int)> HasPrefix(SocketUserMessage message)
+        private (bool, int) HasPrefix(SocketUserMessage message, string prefix)
         {
             int argPos = 0;
             if (message.HasMentionPrefix(_client.CurrentUser, ref argPos))
                 return (true, argPos);
 
-            if (!(message.Channel is IGuildChannel guildChannel))
+            if (prefix is null)
                 return (false, argPos);
 
-            string prefix;
-            if (hostEnvironment.IsDevelopment())
+            string trimmed = prefix.Trim();
+
+            if (string.IsNullOrWhiteSpace(trimmed))
             {
-                prefix = ">";
-            }
-            else
-            {
-                prefix = (await serverRepo.GetServerPrefix(guildChannel.GuildId))?.Trim();
+                return (false, argPos);
             }
 
-            if (string.IsNullOrWhiteSpace(prefix))
-            {
-                prefix = "!"; 
-            }
-
-            var hasPrefix = message.HasStringPrefix(prefix, ref argPos, StringComparison.InvariantCultureIgnoreCase);
+            var hasPrefix = message.HasStringPrefix(trimmed, ref argPos, StringComparison.InvariantCultureIgnoreCase);
 
             return (hasPrefix, argPos);
         }

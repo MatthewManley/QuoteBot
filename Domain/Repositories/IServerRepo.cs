@@ -1,9 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿using Domain.Models;
+using System.Threading.Tasks;
 
 namespace Domain.Repositories
 {
     public interface IServerRepo
     {
-        Task<string> GetServerPrefix(ulong serverId);
+        Task<ServerConfig> GetServerConfig(ulong serverId);
+        Task<bool> PutServerConfig(ServerConfig serverConfig);
     }
 }

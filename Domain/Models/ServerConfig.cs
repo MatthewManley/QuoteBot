@@ -5,6 +5,7 @@ namespace Domain.Models
     public class ServerConfig
     {
         public ulong ServerId { get; init; }
+        public ulong? ModeratorRole { get; init; }
         public string Prefix { get; init; }
         public string TextChannelListType { get; init; }
         public string VoiceChannelListType { get; init; }

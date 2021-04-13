@@ -5,6 +5,8 @@ using Domain.Repositories;
 using System.Linq;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.Model;
+using System.Collections.Generic;
+using Microsoft.Extensions.Options;
 
 namespace Aws
 {
@@ -16,65 +18,103 @@ namespace Aws
         private const string VoiceChannelList = "VoiceChannelList";
         private const string TextChannelListType = "TextChannelListType";
         private const string VoiceChannelListType = "VoiceChannelListType";
+        private const string ModeratorRole = "ModeratorRole";
         private readonly IAmazonDynamoDB dynamoDbClient;
+        private readonly IOptions<DynamoDbOptions> dynamoDbOptions;
 
-        public ServerRepo(IAmazonDynamoDB dynamoDbClient)
+        public ServerRepo(IAmazonDynamoDB dynamoDbClient, IOptions<DynamoDbOptions> dynamoDbOptions)
         {
             this.dynamoDbClient = dynamoDbClient;
+            this.dynamoDbOptions = dynamoDbOptions;
         }
 
         public async Task<ServerConfig> GetServerConfig(ulong serverId)
         {
-            var primitiveKey = new Primitive(serverId.ToString());
+            var primitiveKey = new Primitive(serverId.ToString(), true);
             var table = GetTable();
             var doc = await table.GetItemAsync(primitiveKey);
             if (doc is null)
             {
                 return null;
             }
-            var result = new ServerConfig
-            {
-                Prefix = doc[Prefix].AsString(),
-                ServerId = doc[ServerId].AsULong(),
-                TextChannelList = doc[TextChannelList].AsListOfPrimitive().Select(x => x.AsULong()).ToList(),
-                VoiceChannelList = doc[VoiceChannelList].AsListOfPrimitive().Select(x => x.AsULong()).ToList(),
-                TextChannelListType = doc[TextChannelListType].AsString(),
-                VoiceChannelListType = doc[VoiceChannelListType].AsString(),
-            };
+            var result = DocumentToServerConfig(doc);
             return result;
         }
 
         public async Task<bool> PutServerConfig(ServerConfig serverConfig)
         {
             var table = GetTable();
-            var map = new System.Collections.Generic.Dictionary<string, AttributeValue>
-            {
-                { ServerId, new AttributeValue{ N = serverConfig.ServerId.ToString() }},
-                { TextChannelListType, new AttributeValue{ S = serverConfig.TextChannelListType }},
-                { VoiceChannelListType, new AttributeValue{ S = serverConfig.VoiceChannelListType }},
-                { TextChannelList, new AttributeValue{ NS = serverConfig.TextChannelList.Select(x => x.ToString()).ToList() }},
-                { VoiceChannelList, new AttributeValue{ NS = serverConfig.VoiceChannelList.Select(x => x.ToString()).ToList() }},
-            };
-
-            if (serverConfig.Prefix is null)
-                map.Add(Prefix, new AttributeValue { NULL = true });
-            else
-                map.Add(Prefix, new AttributeValue{ S = serverConfig.Prefix });
-
-            var document = Document.FromAttributeMap(map);
-            var doc = await table.UpdateItemAsync(document);
+            var document = ServerConfigToDocument(serverConfig);
+            var doc = await table.PutItemAsync(document);
             return true;
         }
 
         public async Task<string> GetServerPrefix(ulong serverId)
         {
-            var config = await this.GetServerConfig(serverId);
+            var config = await GetServerConfig(serverId);
             return config.Prefix;
         }
 
         private Table GetTable()
         {
-            return Table.LoadTable(dynamoDbClient, "quotebot-server");
+            return Table.LoadTable(dynamoDbClient, dynamoDbOptions.Value.ServerConfigTable);
+        }
+
+        private static ServerConfig DocumentToServerConfig(Document doc)
+        {
+            var moderatorRolePrimitive = doc[ModeratorRole].AsPrimitive();
+            ulong? moderatorRole = moderatorRolePrimitive is null ? null : moderatorRolePrimitive.AsULong();
+
+            var voiceChannelListPrimitive = doc[VoiceChannelList].AsPrimitive();
+            var voiceChannelList = voiceChannelListPrimitive is null ? new List<ulong>() : voiceChannelListPrimitive.AsListOfPrimitive().Select(x => x.AsULong()).ToList();
+
+            var textChannelListPrimitive = doc[TextChannelList].AsPrimitive();
+            var textChannelList = textChannelListPrimitive is null ? new List<ulong>() : textChannelListPrimitive.AsListOfPrimitive().Select(x => x.AsULong()).ToList();
+
+            return new ServerConfig
+            {
+                Prefix = doc[Prefix].AsString(),
+                ServerId = doc[ServerId].AsULong(),
+                TextChannelList = voiceChannelList,
+                VoiceChannelList = textChannelList,
+                TextChannelListType = doc[TextChannelListType].AsString(),
+                VoiceChannelListType = doc[VoiceChannelListType].AsString(),
+                ModeratorRole = moderatorRole
+            };
+        }
+
+        private static Document ServerConfigToDocument(ServerConfig serverConfig)
+        {
+            var map = new System.Collections.Generic.Dictionary<string, AttributeValue>
+            {
+                { ServerId, new AttributeValue{ N = serverConfig.ServerId.ToString() }},
+                { TextChannelListType, new AttributeValue{ S = serverConfig.TextChannelListType }},
+                { VoiceChannelListType, new AttributeValue{ S = serverConfig.VoiceChannelListType }},
+            };
+
+            if (serverConfig.TextChannelList is null || TextChannelList.Length == 0)
+                map.Add(TextChannelList, new AttributeValue { NULL = true });
+            else
+                map.Add(TextChannelList, new AttributeValue { NS = serverConfig.TextChannelList.Select(x => x.ToString()).ToList() });
+
+            if (serverConfig.TextChannelList is null || TextChannelList.Length == 0)
+                map.Add(VoiceChannelList, new AttributeValue { NULL = true });
+            else
+                map.Add(VoiceChannelList, new AttributeValue { NS = serverConfig.VoiceChannelList.Select(x => x.ToString()).ToList() });
+
+            if (serverConfig.Prefix is null)
+                map.Add(Prefix, new AttributeValue { NULL = true });
+            else
+                map.Add(Prefix, new AttributeValue { S = serverConfig.Prefix });
+
+            if (serverConfig.ModeratorRole.HasValue)
+                map.Add(ModeratorRole, new AttributeValue { N = serverConfig.ModeratorRole.ToString() });
+            else
+                map.Add(ModeratorRole, new AttributeValue { NULL = true });
+
+            var document = Document.FromAttributeMap(map);
+            return document;
+
         }
     }
 }
