@@ -65,18 +65,18 @@ namespace Aws
             var moderatorRolePrimitive = doc[ModeratorRole].AsPrimitive();
             ulong? moderatorRole = moderatorRolePrimitive is null ? null : moderatorRolePrimitive.AsULong();
 
-            var voiceChannelListPrimitive = doc[VoiceChannelList].AsPrimitive();
-            var voiceChannelList = voiceChannelListPrimitive is null ? new List<ulong>() : voiceChannelListPrimitive.AsListOfPrimitive().Select(x => x.AsULong()).ToList();
+            var voiceChannelListPrimitive = doc[VoiceChannelList];
+            var voiceChannelList = voiceChannelListPrimitive is DynamoDBNull ? new List<ulong>() : voiceChannelListPrimitive.AsListOfPrimitive().Select(x => x.AsULong()).ToList();
 
-            var textChannelListPrimitive = doc[TextChannelList].AsPrimitive();
-            var textChannelList = textChannelListPrimitive is null ? new List<ulong>() : textChannelListPrimitive.AsListOfPrimitive().Select(x => x.AsULong()).ToList();
+            var textChannelListPrimitive = doc[TextChannelList];
+            var textChannelList = textChannelListPrimitive is DynamoDBNull ? new List<ulong>() : textChannelListPrimitive.AsListOfPrimitive().Select(x => x.AsULong()).ToList();
 
             return new ServerConfig
             {
                 Prefix = doc[Prefix].AsString(),
                 ServerId = doc[ServerId].AsULong(),
-                TextChannelList = voiceChannelList,
-                VoiceChannelList = textChannelList,
+                TextChannelList = textChannelList,
+                VoiceChannelList = voiceChannelList,
                 TextChannelListType = doc[TextChannelListType].AsString(),
                 VoiceChannelListType = doc[VoiceChannelListType].AsString(),
                 ModeratorRole = moderatorRole
@@ -92,12 +92,12 @@ namespace Aws
                 { VoiceChannelListType, new AttributeValue{ S = serverConfig.VoiceChannelListType }},
             };
 
-            if (serverConfig.TextChannelList is null || TextChannelList.Length == 0)
+            if (serverConfig.TextChannelList is null || serverConfig.TextChannelList.Count == 0)
                 map.Add(TextChannelList, new AttributeValue { NULL = true });
             else
                 map.Add(TextChannelList, new AttributeValue { NS = serverConfig.TextChannelList.Select(x => x.ToString()).ToList() });
 
-            if (serverConfig.TextChannelList is null || TextChannelList.Length == 0)
+            if (serverConfig.VoiceChannelList is null || serverConfig.VoiceChannelList.Count == 0)
                 map.Add(VoiceChannelList, new AttributeValue { NULL = true });
             else
                 map.Add(VoiceChannelList, new AttributeValue { NS = serverConfig.VoiceChannelList.Select(x => x.ToString()).ToList() });

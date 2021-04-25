@@ -1,7 +1,7 @@
-﻿namespace Domain.Models
+﻿namespace Domain.Models.Discord
 {
 
-    public class GetCurrentUserResponse
+    public class User
     {
         /// <summary>
         /// the user's id

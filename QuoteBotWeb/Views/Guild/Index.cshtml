@@ -6,6 +6,7 @@
         var imageUrl = $"https://cdn.discordapp.com/icons/{guild.Id}/{guild.Icon}.png";
         var categoriesUrl = $"/Guild/{guild.Id}/Categories";
         var quotesUrl = $"/Guild/{guild.Id}/Quotes";
+        var configureUrl = $"/Guild/{guild.Id}/Config";
         <div class="row">
             <div class="col">
                 <img src="@imageUrl" />
@@ -17,6 +18,9 @@
             <div class="col">
                 <a href="@quotesUrl" class="btn btn-primary">Quotes</a>
             </div>
+            <div class="col">
+                <a href="@configureUrl" class="btn btn-primary">Configure</a>
+            </div>
         </div>
-}
+    }
 </div>

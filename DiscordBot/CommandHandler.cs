@@ -42,13 +42,23 @@ namespace DiscordBot
 
         public void InitializeAsync()
         {
-
-            commands = Assembly.GetExecutingAssembly()
+            var methodInfos = Assembly.GetExecutingAssembly()
                 .GetTypes()
                 .Where(x => x.IsSubclassOf(typeof(MyCommandSet)))
                 .Select(GetCommandMethods)
                 .SelectMany(x => x)
-                .ToDictionary(x => ((MyCommand)x.GetCustomAttribute(typeof(MyCommand))).Name);
+                .ToList();
+            foreach (var value in methodInfos)
+            {
+                var parameterInfo = value.GetParameters();
+                if (parameterInfo.Length != 2)
+                    throw new Exception();
+                if (parameterInfo[0].ParameterType != typeof(SocketCommandContext))
+                    throw new Exception();
+                if (parameterInfo[1].ParameterType != typeof(string[]))
+                    throw new Exception();
+            }
+            commands = methodInfos.ToDictionary(x => ((MyCommand)x.GetCustomAttribute(typeof(MyCommand))).Name);
             _client.MessageReceived += HandleCommandAsyncWrapper;
             _client.JoinedGuild += _client_JoinedGuild;
             _client.GuildAvailable += _client_JoinedGuild;

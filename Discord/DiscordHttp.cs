@@ -1,4 +1,5 @@
-﻿using Discord.Responses;
+﻿using Discord.Models;
+using Discord.Responses;
 using Domain.Repositories;
 using Microsoft.Extensions.Options;
 using System;
@@ -20,7 +21,7 @@ namespace Discord
             this.options = options.Value;
         }
 
-        public async Task<Domain.Models.AccessTokenResponse> GetAccessToken(string code)
+        public async Task<Domain.Models.Discord.AccessTokenResponse> GetAccessToken(string code)
         {
             var uri = new Uri($"{options.BaseUrl}/oauth2/token");
             var form_content = new FormUrlEncodedContent(new[]
@@ -45,7 +46,7 @@ namespace Discord
 
         }
 
-        public async Task<Domain.Models.GetCurrentUserResponse> GetCurrentUser(string bearerToken)
+        public async Task<Domain.Models.Discord.User> GetCurrentUser(string bearerToken)
         {
             var uri = new Uri($"{options.BaseUrl}/users/@me");
             var request = new HttpRequestMessage()
@@ -60,7 +61,7 @@ namespace Discord
             return result.MapToDomain();
         }
 
-        public async Task<List<Domain.Models.UserGuild>> GetCurrentUserGuilds(string bearerToken)
+        public async Task<List<Domain.Models.Discord.UserGuild>> GetCurrentUserGuilds(string bearerToken)
         {
             var uri = new Uri($"{options.BaseUrl}/users/@me/guilds");
             var request = new HttpRequestMessage()
@@ -73,6 +74,72 @@ namespace Discord
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadAsObjectAsync<List<UserGuild>>();
             return result.Select(x => x.MapToDomain()).ToList();
+        }
+
+        public async Task<List<Domain.Models.Discord.GuildRole>> GetGuildRoles(Domain.Models.Discord.TokenType tokenType, string bearerToken, ulong guildId)
+        {
+            var uri = new Uri($"{options.BaseUrl}/guilds/{guildId}/roles");
+            var request = new HttpRequestMessage()
+            {
+                RequestUri = uri,
+                Method = HttpMethod.Get
+            };
+            switch (tokenType)
+            {
+                case Domain.Models.Discord.TokenType.Bearer:
+                    request.Headers.Add("Authorization", $"Bearer {bearerToken}");
+                    break;
+                case Domain.Models.Discord.TokenType.Bot:
+                    request.Headers.Add("Authorization", $"Bot {bearerToken}");
+                    break;
+                default:
+                    throw new Exception();
+            }
+            var response = await httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadAsObjectAsync<List<GuildRole>>();
+            return result.Select(x => x.MapToDomain()).ToList();
+        }
+
+        public async Task<List<Domain.Models.Discord.GuildChannel>> GetGuildChannels(Domain.Models.Discord.TokenType tokenType, string bearerToken, ulong guildId)
+        {
+            var uri = new Uri($"{options.BaseUrl}/guilds/{guildId}/channels");
+            var request = new HttpRequestMessage()
+            {
+                RequestUri = uri,
+                Method = HttpMethod.Get
+            };
+            switch (tokenType)
+            {
+                case Domain.Models.Discord.TokenType.Bearer:
+                    request.Headers.Add("Authorization", $"Bearer {bearerToken}");
+                    break;
+                case Domain.Models.Discord.TokenType.Bot:
+                    request.Headers.Add("Authorization", $"Bot {bearerToken}");
+                    break;
+                default:
+                    throw new Exception();
+            }
+            var response = await httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadAsObjectAsync<List<GuildChannel>>();
+            return result.Select(x => x.MapToDomain()).ToList();
+        }
+
+        public async Task<Domain.Models.Discord.GuildMember> GetGuildMember(string bearerToken, ulong guildId, ulong userId)
+        {
+            var uri = new Uri($"{options.BaseUrl}/guilds/{guildId}/members/{userId}");
+            var request = new HttpRequestMessage()
+            {
+                RequestUri = uri,
+                Method = HttpMethod.Get
+            };
+            request.Headers.Add("Authorization", $"Bearer {bearerToken}");
+            var response = await httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadAsObjectAsync<GuildMember>();
+            return result.MapToDomain();
+
         }
     }
 }

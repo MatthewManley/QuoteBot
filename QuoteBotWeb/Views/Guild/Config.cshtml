@@ -1,0 +1,147 @@
+﻿@model QuoteBotWeb.Models.Guild.ConfigViewModel
+
+<form method="post" enctype="application/x-www-form-urlencoded">
+    <div class="form-group">
+        <label for="ModeratorRole">Moderator Role</label>
+        <small id="ModeratorRoleHelp" class="form-text text-muted">Anyone with this role can upload, add, edit, and remove quotes and categories. They can also change the settings on this configuration page.</small>
+        @if (Model.IsAdmin)
+        {
+            var noneSelected = Model.ServerConfig.ModeratorRole is null;
+            <select class="form-control custom-select" id="ModeratorRole" name="ModeratorRole">
+                @if (noneSelected)
+                {
+                    <option value="none" selected>None</option>
+                }
+                else
+                {
+                    <option value="none">None</option>
+                }
+                @foreach (var role in Model.GuildRoles)
+                {
+                    if (Model.ServerConfig.ModeratorRole == role.Id)
+                    {
+                        <option value="@role.Id" selected>@role.Id - @role.Name</option>
+                    }
+                    else
+                    {
+                        <option value="@role.Id">@role.Id - @role.Name</option>
+                    }
+                }
+            </select>
+        }
+        else
+        {
+            var moderatorRole = Model.GuildRoles.FirstOrDefault(x => x.Id == Model.ServerConfig.ModeratorRole);
+            <span>@moderatorRole.Name</span>
+        }
+    </div>
+    <div class="form-group">
+        <label for="Prefix">Bot Prefix</label>
+        <small id="PrefixHelp" class="form-text text-muted">The message prefix used to trigger the bot into responding to commands.</small>
+        <input type="text" class="form-control" id="Prefix" name="Prefix" value="@Model.ServerConfig.Prefix" />
+    </div>
+    <div class="form-group">
+        <h3>Text Channels</h3>
+        <h4>List Type</h4>
+        <p>If "Block" is selected, then any text channels that are selected will be ignored by the bot.</p>
+        <p>If "Allow" is selected, then the bot will only respond to messages sent in text channels that are selected.</p>
+        <div class="form-check">
+            @if (Model.ServerConfig.TextChannelListType == "ALLOW")
+            {
+                <input class="form-check-input" type="radio" name="TextListType" id="textBlock" value="BLOCK">
+            }
+            else
+            {
+                <input class="form-check-input" type="radio" name="TextListType" id="textBlock" value="BLOCK" checked>
+            }
+            <label class="form-check-label" for="textBlock">
+                Block
+            </label>
+        </div>
+        <div class="form-check">
+            @if (Model.ServerConfig.TextChannelListType == "ALLOW")
+            {
+                <input class="form-check-input" type="radio" name="TextListType" id="textAllow" value="ALLOW" checked>
+            }
+            else
+            {
+                <input class="form-check-input" type="radio" name="TextListType" id="textAllow" value="ALLOW">
+            }
+            <label class="form-check-label" for="textAllow">
+                Allow
+            </label>
+        </div>
+        <h4>Channel List</h4>
+        @foreach (var channel in Model.TextChannels)
+        {
+            var isChecked = Model.ServerConfig.TextChannelList.Contains(channel.Id);
+            <div class="form-check">
+                @if (isChecked)
+                {
+                    <input class="form-check-input" type="checkbox" value="@channel.Id" id="text-@channel.Id" name="TextChannels" checked>
+                }
+                else
+                {
+                    <input class="form-check-input" type="checkbox" value="@channel.Id" id="text-@channel.Id" name="TextChannels">
+                }
+                <label class="form-check-label" for="@channel.Id">
+                    @channel.Id - @channel.Name
+                </label>
+            </div>
+        }
+    </div>
+    <div class="form-group">
+        <hr>
+        <h3>Voice Channels</h3>
+        <h4>List Type</h4>
+        <p>If "Block" is selected, then the bot will not join any voice channels that are selected.</p>
+        <p>If "Allow" is selected, then the bot will only join voice channels that are selected.</p>
+        <div class="form-check">
+            @if (Model.ServerConfig.VoiceChannelListType == "ALLOW")
+            {
+                <input class="form-check-input" type="radio" name="VoiceListType" id="voiceBlock" value="BLOCK">
+            }
+            else
+            {
+                <input class="form-check-input" type="radio" name="VoiceListType" id="voiceBlock" value="BLOCK" checked>
+            }
+            <label class="form-check-label" for="voiceBlock">
+                Block
+            </label>
+        </div>
+        <div class="form-check">
+            @if (Model.ServerConfig.VoiceChannelListType == "ALLOW")
+            {
+                <input class="form-check-input" type="radio" name="VoiceListType" id="voiceAllow" value="ALLOW" checked>
+            }
+            else
+            {
+                <input class="form-check-input" type="radio" name="VoiceListType" id="voiceAllow" value="ALLOW">
+            }
+            <label class="form-check-label" for="voiceAllow">
+                Allow
+            </label>
+        </div>
+        <h4>Channel List</h4>
+        @foreach (var channel in Model.VoiceChannels)
+        {
+            var isChecked = Model.ServerConfig.VoiceChannelList.Contains(channel.Id);
+            <div class="form-check">
+                @if (isChecked)
+                {
+                    <input class="form-check-input" type="checkbox" value="@channel.Id" id="voice-@channel.Id" name="VoiceChannels" checked>
+                }
+                else
+                {
+                    <input class="form-check-input" type="checkbox" value="@channel.Id" id="voice-@channel.Id" name="VoiceChannels">
+                }
+                <label class="form-check-label" for="voice-@channel.Id">
+                    @channel.Id - @channel.Name
+                </label>
+            </div>
+        }
+    </div>
+    <div class="form-group">
+        <input type="submit" class="btn btn-success" value="Submit" />
+    </div>
+</form>

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aws;
 using Discord;
+using Domain.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -30,6 +31,7 @@ namespace QuoteBotWeb
             services.AddControllersWithViews();
             services.ConfigureDiscordServices(Configuration);
             services.ConfigureAwsServices(Configuration);
+            services.Configure<AuthOptions>(Configuration.GetSection("Auth"));
             services.AddMemoryCache();
             services.ConfigureApplicationServices(Configuration);
         }

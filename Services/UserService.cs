@@ -1,4 +1,5 @@
 ﻿using Domain.Models;
+using Domain.Models.Discord;
 using Domain.Repositories;
 using Domain.Services;
 using Microsoft.Extensions.Caching.Memory;
