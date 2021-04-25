@@ -63,7 +63,7 @@ namespace Aws
         private static ServerConfig DocumentToServerConfig(Document doc)
         {
             var moderatorRolePrimitive = doc[ModeratorRole].AsPrimitive();
-            ulong? moderatorRole = moderatorRolePrimitive is null ? null : moderatorRolePrimitive.AsULong();
+            ulong? moderatorRole = moderatorRolePrimitive?.AsULong();
 
             var voiceChannelListPrimitive = doc[VoiceChannelList];
             var voiceChannelList = voiceChannelListPrimitive is DynamoDBNull ? new List<ulong>() : voiceChannelListPrimitive.AsListOfPrimitive().Select(x => x.AsULong()).ToList();
