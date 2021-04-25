@@ -24,7 +24,7 @@ namespace DiscordBot
         private readonly IServerRepo serverRepo;
         private readonly IQuoteBotRepo quoteBotRepo;
         private readonly IMemoryCache memoryCache;
-        private readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(5, 5);
+        private readonly SemaphoreSlim semaphoreSlim = new(5, 5);
 
         public CommandHandler(
             DiscordSocketClient client,
@@ -118,7 +118,7 @@ namespace DiscordBot
         private async Task HandleCommandAsync(SocketMessage rawMessage)
         {
             // Ignore messages that aren't socket user messages
-            if (!(rawMessage is SocketUserMessage message))
+            if (rawMessage is not SocketUserMessage message)
                 return;
 
             // Ingore whoose source is not a user
@@ -165,7 +165,7 @@ namespace DiscordBot
             if (!hasPrefix)
                 return;
 
-            var command = message.Content.Substring(argPos).Split(' ');
+            var command = message.Content[argPos..].Split(' ');
             if (command.Length <= 0)
                 return;
 

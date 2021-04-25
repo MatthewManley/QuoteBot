@@ -24,7 +24,7 @@ namespace Aws
             var cmdText = "SELECT id Id, name Name, owner OwnerId FROM category WHERE id = @id LIMIT 1;";
             var parameters = new
             {
-                id = id
+                id
             };
             return await dbConnection.QueryFirstAsync<Category>(cmdText, parameters);
         }
@@ -35,8 +35,8 @@ namespace Aws
             var cmdText = "INSERT INTO category (name, owner) VALUES (@name, @owner);";
             var parameters = new
             {
-                name = name,
-                owner = owner
+                name,
+                owner
             };
             await dbConnection.ExecuteAsync(cmdText, parameters);
             var id = await dbConnection.ExecuteScalarAsync<uint>("SELECT LAST_INSERT_ID();");
@@ -54,7 +54,7 @@ namespace Aws
             var cmdText = "DELETE FROM category WHERE id = @id;";
             var parameters = new
             {
-                id = id,
+                id,
             };
             await dbConnection.ExecuteAsync(cmdText, parameters);
         }
@@ -65,7 +65,7 @@ namespace Aws
             var cmdText = "SELECT id Id, name Name, owner OwnerId FROM category WHERE owner = @owner;";
             var parameters = new
             {
-                owner = owner
+                owner
             };
             return await dbConnection.QueryAsync<Category>(cmdText, parameters);
         }

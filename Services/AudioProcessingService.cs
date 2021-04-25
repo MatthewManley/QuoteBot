@@ -28,7 +28,7 @@ namespace Services
             this.audioOwnerRepo = audioOwnerRepo;
         }
 
-        public async Task<AudioOwner> Upload(IFormFile formFile, CancellationToken token, ulong owner, ulong uploader, string name)
+        public async Task<AudioOwner> Upload(IFormFile formFile, ulong owner, ulong uploader, string name, CancellationToken token = default)
         {
 
             if (formFile.Length > MaxFileLength)
@@ -145,6 +145,8 @@ namespace Services
             }
         }
 
+
+        //TODO: Do something with token parameter or remove parameter
         private static async Task<Format> GetFormat(string path, CancellationToken token)
         {
             var arguments = $"-v quiet -of json -hide_banner -show_entries format \"{path}\"";

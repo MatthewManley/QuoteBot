@@ -46,8 +46,7 @@ namespace Aws
                 {
                     var authRepo = context.RequestServices.GetRequiredService<IAuthRepo>();
                     var memoryCache = context.RequestServices.GetRequiredService<IMemoryCache>();
-                    AuthEntry authEntry = null;
-                    if (!memoryCache.TryGetValue($"key={keyCookie}", out authEntry))
+                    if (!memoryCache.TryGetValue($"key={keyCookie}", out AuthEntry authEntry))
                     {
                         authEntry = await authRepo.GetAuthEntry(keyCookie);
                         if (authEntry != null)

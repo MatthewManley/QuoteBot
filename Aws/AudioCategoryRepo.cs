@@ -51,7 +51,7 @@ namespace Aws
                 "WHERE audio_category.category = @categoryId;";
             var parameters = new
             {
-                categoryId = categoryId
+                categoryId
             };
             return await dbConnection.QueryAsync<AudioOwner>(cmdText, parameters);
         }
@@ -64,7 +64,7 @@ namespace Aws
                 "WHERE audio_category.audio_owner = @audioOwnerId;";
             var parameters = new
             {
-                audioOwnerId = audioOwnerId
+                audioOwnerId
             };
             return await dbConnection.QueryAsync<Category>(cmdText, parameters);
         }
@@ -78,7 +78,7 @@ namespace Aws
                 "WHERE audio_category.category = @categoryId;";
             var parameters = new
             {
-                categoryId = categoryId
+                categoryId
             };
             var intermediate = await dbConnection.QueryAsync<GetNamedAudioResponse>(cmdText, parameters);
             return intermediate.Select(x => x.ToNamedAudio());

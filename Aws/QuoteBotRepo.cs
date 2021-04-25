@@ -25,7 +25,7 @@ namespace Aws
                 "WHERE category.owner = @ownerId;";
             var parameters = new
             {
-                ownerId = ownerId
+                ownerId
             };
             return await dbConnection.QueryAsync<Category>(cmdText, parameters);
         }
@@ -40,7 +40,7 @@ namespace Aws
                 "WHERE audio_owner.owner = @ownerId OR category.owner = @ownerId ;";
             var parameters = new
             {
-                ownerId = ownerId
+                ownerId
             };
             return await dbConnection.QueryAsync<AudioOwnerCategory>(cmdText, parameters);
         }
@@ -52,8 +52,8 @@ namespace Aws
             var parameters = new
             {
                 audio = audioId,
-                owner = owner,
-                name = name
+                owner,
+                name
             };
             var id = await dbConnection.ExecuteScalarAsync<uint>(cmdText, parameters);
             return new AudioOwner
@@ -104,7 +104,7 @@ namespace Aws
             var parameters = new
             {
                 owner = ownerId,
-                category = category
+                category
             };
             var result = await dbConnection.QueryAsync<GetNamedAudioResponse>(cmdText, parameters);
             return result.Select(x => x.ToNamedAudio());
@@ -137,9 +137,9 @@ namespace Aws
                    "LIMIT 1;";
             var parameters = new
             {
-                category = category,
-                ownerId = ownerId,
-                name = name
+                category,
+                ownerId,
+                name
             };
             var result = await dbConnection.QueryFirstAsync<GetNamedAudioResponse>(cmdText, parameters);
             return result.ToNamedAudio();

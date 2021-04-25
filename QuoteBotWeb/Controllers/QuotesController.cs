@@ -91,7 +91,7 @@ namespace QuoteBotWeb.Controllers
             var server_categories = await quoteBotRepo.GetCategoriesByOwner(server);
             var pairs = await quoteBotRepo.GetAudioCategoriesByOwner(server);
 
-            var pair_category_join = pairs.Join(server_categories, pair => pair.CategoryId, cateogry => cateogry.Id, (pair, category) => new { pair = pair, category = category });
+            var pair_category_join = pairs.Join(server_categories, pair => pair.CategoryId, cateogry => cateogry.Id, (pair, category) => new { pair, category });
             var in_category = pair_category_join.Where(x => x.pair.AudioOwnerId == named_audio.AudioOwner.Id).Select(x => x.category).ToList();
             var not_in_category = server_categories.Where(x => !in_category.Select(c => c.Id).Contains(x.Id)).ToList();
 
@@ -139,7 +139,7 @@ namespace QuoteBotWeb.Controllers
                 return BadRequest("Invalid quote name");
             }
 
-            var audio_owner = await audioProcessingService.Upload(file, token, server, authEntry.UserId, cleanedName);
+            var audio_owner = await audioProcessingService.Upload(file, server, authEntry.UserId, cleanedName, token);
             foreach (var categoryId in categories)
             {
                 var category = await categoryRepo.GetCategory(categoryId);
@@ -148,10 +148,10 @@ namespace QuoteBotWeb.Controllers
                     await audioCategoryRepo.Create(audio_owner.Id, category.Id);
                 }
             }
-            return RedirectToAction("Index", new { server = server });
+            return RedirectToAction("Index", new { server });
         }
 
-        private bool IsValidName(string name, out string cleaned)
+        private static bool IsValidName(string name, out string cleaned)
         {
             cleaned = name;
             if (string.IsNullOrWhiteSpace(name))
@@ -224,7 +224,7 @@ namespace QuoteBotWeb.Controllers
             await audioOwnerRepo.Delete(quote);
             if (string.IsNullOrWhiteSpace(redirect))
             {
-                return RedirectToAction("Index", new { server = server });
+                return RedirectToAction("Index", new { server });
             }
             else
             {
@@ -265,7 +265,7 @@ namespace QuoteBotWeb.Controllers
 
             await audioOwnerRepo.Rename(quote, cleaned_name);
 
-            return RedirectToAction("Edit", new { server = server, quote = quote});
+            return RedirectToAction("Edit", new { server, quote });
         }
     }
 }

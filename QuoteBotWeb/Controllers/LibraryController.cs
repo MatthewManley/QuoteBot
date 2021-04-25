@@ -13,11 +13,9 @@ namespace QuoteBotWeb.Controllers
     {
         private readonly IAudioOwnerRepo audioOwnerRepo;
         private readonly IAudioProcessingService audioProcessingService;
-        private readonly IAudioRepo audioRepo;
 
-        public LibraryController(IAudioRepo audioRepo, IAudioOwnerRepo audioOwnerRepo, IAudioProcessingService audioProcessingService)
+        public LibraryController(IAudioOwnerRepo audioOwnerRepo, IAudioProcessingService audioProcessingService)
         {
-            this.audioRepo = audioRepo;
             this.audioOwnerRepo = audioOwnerRepo;
             this.audioProcessingService = audioProcessingService;
         }
@@ -46,14 +44,14 @@ namespace QuoteBotWeb.Controllers
         [HttpPost]
         public async Task<IActionResult> Upload(UploadFileForm uploadFileForm)
         {
-            var token = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
+            //var token = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
             var authEntry = HttpContext.GetAuthEntry();
 
             if (authEntry is null)
             {
                 return Redirect("/login");
             }
-            await audioProcessingService.Upload(uploadFileForm.File, CancellationToken.None, authEntry.UserId, authEntry.UserId, uploadFileForm.Name);
+            await audioProcessingService.Upload(uploadFileForm.File, authEntry.UserId, authEntry.UserId, uploadFileForm.Name);
             return Ok();
         }
     }

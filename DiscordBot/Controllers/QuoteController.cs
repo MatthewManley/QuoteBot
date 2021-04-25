@@ -21,11 +21,11 @@ namespace DiscordBot.Controllers
         public async Task<IActionResult> SendMessage([FromBody] SendMessageBody body)
         {
             var channel = discordSocketClient.GetChannel(body.ChannelId);
-            if (!(channel is ISocketMessageChannel sgc))
+            if (channel is not ISocketMessageChannel sgc)
             {
                 return new BadRequestResult();
             }
-            var msg = await sgc.SendMessageAsync(body.Message);
+            await sgc.SendMessageAsync(body.Message);
             return new OkResult();
         }
     }

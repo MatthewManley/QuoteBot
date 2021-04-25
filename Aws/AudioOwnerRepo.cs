@@ -22,7 +22,7 @@ namespace Aws
         {
             using var dbConnection = await dbConnectionFactory.CreateConnection();
             var cmdText = "SELECT id Id, audio AudioId, owner OwnerId, name Name FROM audio_owner WHERE id = @id;";
-            var parameters = new { id = id };
+            var parameters = new { id };
             return await dbConnection.QueryFirstAsync<AudioOwner>(cmdText, parameters);
         }
 
@@ -32,7 +32,7 @@ namespace Aws
             var cmdText =
                 "Select audio_owner.id Id, audio_owner.audio AudioId, audio_owner.owner OwnerId, audio_owner.name Name FROM audio_owner " +
                 "WHERE audio_owner.owner = @ownerId;";
-            var paramaters = new { ownerId = ownerId };
+            var paramaters = new { ownerId };
             return await dbConnection.QueryAsync<AudioOwner>(cmdText, paramaters);
         }
 
@@ -44,7 +44,7 @@ namespace Aws
                 "WHERE audio_owner.audio = @audioId;";
             var paramaters = new
             {
-                audioId = audioId
+                audioId
             };
             return await dbConnection.QueryAsync<AudioOwner>(cmdText, paramaters);
         }
@@ -57,7 +57,7 @@ namespace Aws
             {
                 audio = audioId,
                 owner = ownerId,
-                name = name
+                name
             };
             await dbConnection.ExecuteAsync(cmdText, parameters);
             var id = await dbConnection.ExecuteScalarAsync<uint>("SELECT LAST_INSERT_ID();");
@@ -77,7 +77,7 @@ namespace Aws
             var cmdText = "DELETE FROM audio_owner WHERE id = @id";
             var parameters = new
             {
-                id = id
+                id
             };
             await dbConnection.ExecuteAsync(cmdText, parameters);
         }
@@ -89,7 +89,7 @@ namespace Aws
             var parameters = new
             {
                 name = newName,
-                id = id
+                id
             };
             await dbConnection.ExecuteAsync(cmdText, parameters);
         }

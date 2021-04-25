@@ -6,7 +6,7 @@ namespace Services
 {
     public static class Extensions
     {
-        public static IServiceCollection ConfigureApplicationServices(this IServiceCollection serviceCollection, IConfiguration configuration)
+        public static IServiceCollection ConfigureApplicationServices(this IServiceCollection serviceCollection)
         {
             serviceCollection.AddTransient<IAudioProcessingService, AudioProcessingService>();
             serviceCollection.AddTransient<IUserService, UserService>();

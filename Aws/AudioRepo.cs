@@ -41,8 +41,8 @@ namespace Aws
             var cmdText = "INSERT INTO audio (path, uploader) VALUES (@path, @uploader);";
             var parameters = new
             {
-                path = path,
-                uploader = uploader
+                path,
+                uploader
             };
             await dbConnection.ExecuteAsync(cmdText, parameters);
             var id = await dbConnection.ExecuteScalarAsync<uint>("SELECT LAST_INSERT_ID();");
@@ -78,7 +78,7 @@ namespace Aws
                 ContentType = "audio/ogg",
                 BucketName = "quotebot-audio-post",
             };
-            var response = await s3Client.PutObjectAsync(por);
+            await s3Client.PutObjectAsync(por);
         }
     }
 }

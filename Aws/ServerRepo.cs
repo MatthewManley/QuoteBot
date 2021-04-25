@@ -45,7 +45,7 @@ namespace Aws
         {
             var table = GetTable();
             var document = ServerConfigToDocument(serverConfig);
-            var doc = await table.PutItemAsync(document);
+            await table.PutItemAsync(document);
             return true;
         }
 

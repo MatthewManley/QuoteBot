@@ -18,6 +18,7 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("ping")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Needed for command handler")]
         public async Task Ping(SocketCommandContext context, string[] command)
         {
             await context.Reply("Pong!");
@@ -31,37 +32,38 @@ namespace DiscordBot.Modules
             if (uptime.Days > 0)
             {
                 builder.Append(uptime.Days);
-                builder.Append("d");
+                builder.Append('d');
             }
 
             if (uptime.Hours > 0 || builder.Length > 0)
             {
                 if (builder.Length > 0)
-                    builder.Append(" ");
+                    builder.Append(' ');
                 builder.Append(uptime.Hours);
-                builder.Append("h");
+                builder.Append('h');
             }
 
             if (uptime.Minutes > 0 || builder.Length > 0)
             {
                 if (builder.Length > 0)
-                    builder.Append(" ");
+                    builder.Append(' ');
                 builder.Append(uptime.Minutes);
-                builder.Append("m");
+                builder.Append('m');
             }
 
             if (uptime.Seconds > 0 || builder.Length > 0)
             {
                 if (builder.Length > 0)
-                    builder.Append(" ");
+                    builder.Append(' ');
                 builder.Append(uptime.Seconds);
-                builder.Append("s");
+                builder.Append('s');
             }
             return builder;
         }
 
 
         [MyCommand("stats")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Needed for command handler")]
         public async Task Stats(SocketCommandContext context, string[] command)
         {
             var guilds = await discordClient.GetGuildsAsync();
@@ -78,6 +80,7 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("invite")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Needed for command handler")]
         public async Task Invite(SocketCommandContext context, string[] commmand)
         {
             var app = await discordClient.GetApplicationInfoAsync();

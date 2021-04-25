@@ -33,7 +33,7 @@ namespace QuoteBotWeb
             services.ConfigureAwsServices(Configuration);
             services.Configure<AuthOptions>(Configuration.GetSection("Auth"));
             services.AddMemoryCache();
-            services.ConfigureApplicationServices(Configuration);
+            services.ConfigureApplicationServices();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
