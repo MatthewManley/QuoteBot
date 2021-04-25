@@ -35,7 +35,23 @@ namespace Aws
             var doc = await table.GetItemAsync(primitiveKey);
             if (doc is null)
             {
-                return null;
+                var newServerConfig = new ServerConfig
+                {
+                    ModeratorRole = null,
+                    Prefix = null,
+                    ServerId = serverId,
+                    TextChannelList = null,
+                    TextChannelListType = "BLOCK",
+                    VoiceChannelList = null,
+                    VoiceChannelListType = "BLOCK"
+                };
+                var newDoc = ServerConfigToDocument(newServerConfig);
+                await table.PutItemAsync(newDoc);
+                doc = await table.GetItemAsync(primitiveKey);
+                if (doc is null)
+                {
+                    throw new System.Exception("New server config should not be null");
+                }
             }
             var result = DocumentToServerConfig(doc);
             return result;
@@ -73,7 +89,7 @@ namespace Aws
 
             return new ServerConfig
             {
-                Prefix = doc[Prefix].AsString(),
+                Prefix = doc[Prefix].AsPrimitive()?.AsString(),
                 ServerId = doc[ServerId].AsULong(),
                 TextChannelList = textChannelList,
                 VoiceChannelList = voiceChannelList,
