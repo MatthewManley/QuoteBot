@@ -180,7 +180,7 @@ namespace DiscordBot
             }
             
             // Sounds can only be played in a guild
-            if (serverId.HasValue)
+            if (!serverId.HasValue)
                 return;
 
             var categories = await quoteBotRepo.GetCategoriesWithAudio(serverId.Value);
