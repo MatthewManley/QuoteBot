@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using DiscordBot.Services;
+using Domain.Models;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,7 +20,7 @@ namespace DiscordBot.Modules
 
         [MyCommand("ping")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Needed for command handler")]
-        public async Task Ping(SocketCommandContext context, string[] command)
+        public async Task Ping(SocketCommandContext context, string[] command, ServerConfig serverConfig)
         {
             await context.Reply("Pong!");
         }
@@ -64,7 +65,7 @@ namespace DiscordBot.Modules
 
         [MyCommand("stats")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Needed for command handler")]
-        public async Task Stats(SocketCommandContext context, string[] command)
+        public async Task Stats(SocketCommandContext context, string[] command, ServerConfig serverConfig)
         {
             var guilds = await discordClient.GetGuildsAsync();
             var builder = new StringBuilder();
@@ -81,7 +82,7 @@ namespace DiscordBot.Modules
 
         [MyCommand("invite")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Needed for command handler")]
-        public async Task Invite(SocketCommandContext context, string[] commmand)
+        public async Task Invite(SocketCommandContext context, string[] commmand, ServerConfig serverConfig)
         {
             var app = await discordClient.GetApplicationInfoAsync();
             var invite = $"https://discordapp.com/api/oauth2/authorize?client_id={app.Id}&permissions=0&scope=bot";

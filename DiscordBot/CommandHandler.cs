@@ -51,11 +51,13 @@ namespace DiscordBot
             foreach (var value in methodInfos)
             {
                 var parameterInfo = value.GetParameters();
-                if (parameterInfo.Length != 2)
+                if (parameterInfo.Length != 3)
                     throw new Exception();
                 if (parameterInfo[0].ParameterType != typeof(SocketCommandContext))
                     throw new Exception();
                 if (parameterInfo[1].ParameterType != typeof(string[]))
+                    throw new Exception();
+                if (parameterInfo[2].ParameterType != typeof(ServerConfig))
                     throw new Exception();
             }
             commands = methodInfos.ToDictionary(x => ((MyCommand)x.GetCustomAttribute(typeof(MyCommand))).Name);
@@ -175,7 +177,7 @@ namespace DiscordBot
             {
                 var context = new SocketCommandContext(_client, message);
                 var parent = serviceProvider.GetRequiredService(method.DeclaringType);
-                method.Invoke(parent, new object[] { context, command });
+                method.Invoke(parent, new object[] { context, command, serverConfig });
                 return;
             }
             
@@ -188,7 +190,7 @@ namespace DiscordBot
             {
                 var context = new SocketCommandContext(_client, message);
                 var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                await soundMod.PlaySound(context, command);
+                await soundMod.PlaySound(context, command, serverConfig);
                 return;
             }
         }

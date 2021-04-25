@@ -38,7 +38,7 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("list")]
-        public async Task List(SocketCommandContext context, string[] command)
+        public async Task List(SocketCommandContext context, string[] command, ServerConfig serverConfig)
         {
             if (command.Length == 1)
             {
@@ -155,14 +155,14 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("history")]
-        public async Task History(SocketCommandContext context, string[] command)
+        public async Task History(SocketCommandContext context, string[] command, ServerConfig serverConfig)
         {
             var history = statsService.GetHistory(context.Guild.Id);
             await context.Reply(string.Join("\n", history.Select(x => $"{x.Category.Name} {x.NamedAudio.AudioOwner.Name}")));
         }
 
         [MyCommand("random")]
-        public async Task Random(SocketCommandContext context, string[] command)
+        public async Task Random(SocketCommandContext context, string[] command, ServerConfig serverConfig)
         {
             // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
@@ -179,6 +179,25 @@ namespace DiscordBot.Modules
                 await context.Reply("You gotta be in a voice channel");
                 return;
             }
+            switch (serverConfig.VoiceChannelListType)
+            {
+                case "ALLOW":
+                    if (!serverConfig.VoiceChannelList.Contains(channel.Id))
+                    {
+                        await context.Reply("You cannot play quotes in that voice channel!");
+                        return;
+                    }                        
+                    break;
+                case "BLOCK":
+                    if (serverConfig.VoiceChannelList.Contains(channel.Id))
+                    {
+                        await context.Reply("You cannot play quotes in that voice channel!");
+                        return;
+                    }
+                    break;
+                default:
+                    break;
+            }
             statsService.AddToHistory(context.Guild.Id, new HistoryEntry
             {
                 Category = category,
@@ -187,7 +206,7 @@ namespace DiscordBot.Modules
             await Play(channel, audio.Audio, CancellationToken.None);
         }
 
-        public async Task PlaySound(SocketCommandContext context, string[] command)
+        public async Task PlaySound(SocketCommandContext context, string[] command, ServerConfig serverConfig)
         {
             // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
@@ -249,6 +268,22 @@ namespace DiscordBot.Modules
             {
                 await context.Reply("You gotta be in a voice channel or use -c channelName");
                 return;
+            }
+            else if (serverConfig.VoiceChannelListType == "BLOCK")
+            {
+                if (serverConfig.VoiceChannelList.Contains(channel.Id))
+                {
+                    await context.Reply("You cannot play quotes in that voice channel!");
+                    return;
+                }
+            }
+            else if (serverConfig.VoiceChannelListType == "ALLOW")
+            {
+                if (!serverConfig.VoiceChannelList.Contains(channel.Id))
+                {
+                    await context.Reply("You cannot play quotes in that voice channel!");
+                    return;
+                }
             }
             NamedAudio namedAudio;
             if (msgQuote is null)
