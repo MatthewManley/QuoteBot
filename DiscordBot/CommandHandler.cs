@@ -84,7 +84,7 @@ namespace DiscordBot
                     };
                     await serverRepo.PutServerConfig(serverConfig);
                 }
-                memoryCache.Set($"serverconfig={arg.Id}", serverConfig, TimeSpan.FromMinutes(5));
+                memoryCache.Set($"serverconfig={arg.Id}", serverConfig, TimeSpan.FromMinutes(1));
             }
             finally
             {
@@ -137,7 +137,7 @@ namespace DiscordBot
                     serverConfig = await serverRepo.GetServerConfig(serverId.Value);
                     if (serverConfig == null)
                         return;
-                    memoryCache.Set($"serverconfig={serverId}", serverConfig, TimeSpan.FromMinutes(5));
+                    memoryCache.Set($"serverconfig={serverId}", serverConfig, TimeSpan.FromMinutes(1));
                 }
 
                 if (serverConfig.TextChannelListType == "BLOCK")
