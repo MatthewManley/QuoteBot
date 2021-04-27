@@ -69,7 +69,7 @@ namespace DiscordBot
 
         private Task _client_UserVoiceStateUpdated(SocketUser arg1, SocketVoiceState arg2, SocketVoiceState arg3)
         {
-            if (arg1.Id == 107649869665046528 && arg2.VoiceChannel is null && arg3.VoiceChannel is not null)
+            if (arg1.Id == 155123403383242753 && arg2.VoiceChannel is null && arg3.VoiceChannel is not null)
             {
                 Task.Run(async () =>
                 {
