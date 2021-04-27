@@ -23,17 +23,20 @@ namespace DiscordBot.Modules
         private readonly IQuoteBotRepo quoteBotRepo;
         private readonly StatsService statsService;
         private readonly IAmazonS3 s3Client;
+        private readonly IAudioRepo audioRepo;
         private readonly BotOptions botOptions;
 
         public SoundModule(
             IQuoteBotRepo quoteBotRepo,
             StatsService statsService,
             IAmazonS3 s3Client,
-            IOptions<BotOptions> botOptions)
+            IOptions<BotOptions> botOptions,
+            IAudioRepo audioRepo)
         {
             this.quoteBotRepo = quoteBotRepo;
             this.statsService = statsService;
             this.s3Client = s3Client;
+            this.audioRepo = audioRepo;
             this.botOptions = botOptions.Value;
         }
 
@@ -204,6 +207,12 @@ namespace DiscordBot.Modules
                 NamedAudio = audio,
             });
             await Play(channel, audio.Audio, CancellationToken.None);
+        }
+
+        public async Task TedJoined(IVoiceChannel voiceChannel)
+        {
+            var audio = await audioRepo.GetAudioById(682);
+            await Play(voiceChannel, audio, CancellationToken.None);
         }
 
         public async Task PlaySound(SocketCommandContext context, string[] command, ServerConfig serverConfig)

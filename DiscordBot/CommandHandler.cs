@@ -64,6 +64,20 @@ namespace DiscordBot
             _client.MessageReceived += HandleCommandAsyncWrapper;
             _client.JoinedGuild += _client_JoinedGuild;
             _client.GuildAvailable += _client_JoinedGuild;
+            _client.UserVoiceStateUpdated += _client_UserVoiceStateUpdated;
+        }
+
+        private Task _client_UserVoiceStateUpdated(SocketUser arg1, SocketVoiceState arg2, SocketVoiceState arg3)
+        {
+            if (arg1.Id == 107649869665046528 && arg2.VoiceChannel is null && arg3.VoiceChannel is not null)
+            {
+                Task.Run(async () =>
+                {
+                    var soundMod = serviceProvider.GetRequiredService<SoundModule>();
+                    await soundMod.TedJoined(arg3.VoiceChannel);
+                });
+            }
+            return Task.CompletedTask;
         }
 
         private async Task _client_JoinedGuild(SocketGuild arg)
@@ -180,7 +194,7 @@ namespace DiscordBot
                 method.Invoke(parent, new object[] { context, command, serverConfig });
                 return;
             }
-            
+
             // Sounds can only be played in a guild
             if (!serverId.HasValue)
                 return;
