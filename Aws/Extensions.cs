@@ -33,6 +33,7 @@ namespace Aws
             serviceCollection.AddTransient<IAudioCategoryRepo, AudioCategoryRepo>();
             serviceCollection.AddTransient<ICategoryRepo, CategoryRepo>();
             serviceCollection.AddTransient<IServerRepo, ServerRepo>();
+            serviceCollection.AddTransient<IUserJoinedRepo, UserJoinedRepo>();
             return serviceCollection;
         }
 

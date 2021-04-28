@@ -24,6 +24,7 @@ namespace DiscordBot
         private readonly IServerRepo serverRepo;
         private readonly IQuoteBotRepo quoteBotRepo;
         private readonly IMemoryCache memoryCache;
+        private readonly IUserJoinedRepo userJoinedRepo;
         private readonly SemaphoreSlim semaphoreSlim = new(5, 5);
 
         public CommandHandler(
@@ -31,11 +32,13 @@ namespace DiscordBot
             IServiceProvider serviceProvider,
             IServerRepo serverRepo,
             IQuoteBotRepo quoteBotRepo,
-            IMemoryCache memoryCache)
+            IMemoryCache memoryCache,
+            IUserJoinedRepo userJoined)
         {
             this.serverRepo = serverRepo;
             this.quoteBotRepo = quoteBotRepo;
             this.memoryCache = memoryCache;
+            this.userJoinedRepo = userJoined;
             this.serviceProvider = serviceProvider;
             _client = client;
         }
@@ -67,17 +70,36 @@ namespace DiscordBot
             _client.UserVoiceStateUpdated += _client_UserVoiceStateUpdated;
         }
 
-        private Task _client_UserVoiceStateUpdated(SocketUser arg1, SocketVoiceState arg2, SocketVoiceState arg3)
+        private async Task _client_UserVoiceStateUpdated(SocketUser arg1, SocketVoiceState previous, SocketVoiceState newState)
         {
-            if (arg1.Id == 155123403383242753 && arg2.VoiceChannel is null && arg3.VoiceChannel is not null)
+            if (arg1.IsBot)
+                return;
+
+            if (newState.VoiceChannel is null)
+                return;
+
+            if (previous.VoiceChannel is not null && previous.VoiceChannel.Guild.Id == newState.VoiceChannel.Guild.Id)
+                return;
+
+            _ = Task.Run(async () =>
             {
-                Task.Run(async () =>
+                var key = $"userjoined={newState.VoiceChannel.Guild.Id}={arg1.Id}";
+                if (memoryCache.TryGetValue(key, out _))
+                    return;
+                memoryCache.Set(key, new object(), TimeSpan.FromMinutes(5));
+                var user_quotes = (await userJoinedRepo.GetJoinedAudioForUser(arg1.Id)).ToList();
+                if (user_quotes.Count == 1)
                 {
                     var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                    await soundMod.TedJoined(arg3.VoiceChannel);
-                });
-            }
-            return Task.CompletedTask;
+                    await soundMod.Play(newState.VoiceChannel, user_quotes.First(), CancellationToken.None);
+                }
+                else if (user_quotes.Count > 1)
+                {
+                    var audio = user_quotes[StaticRandom.Next(user_quotes.Count)];
+                    var soundMod = serviceProvider.GetRequiredService<SoundModule>();
+                    await soundMod.Play(newState.VoiceChannel, audio, CancellationToken.None);
+                }
+            });
         }
 
         private async Task _client_JoinedGuild(SocketGuild arg)

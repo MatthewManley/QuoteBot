@@ -209,12 +209,6 @@ namespace DiscordBot.Modules
             await Play(channel, audio.Audio, CancellationToken.None);
         }
 
-        public async Task TedJoined(IVoiceChannel voiceChannel)
-        {
-            var audio = await audioRepo.GetAudioById(682);
-            await Play(voiceChannel, audio, CancellationToken.None);
-        }
-
         public async Task PlaySound(SocketCommandContext context, string[] command, ServerConfig serverConfig)
         {
             // If the bot is already in a voice channel in the server, then don't play a quote
@@ -389,7 +383,7 @@ namespace DiscordBot.Modules
             return Convert.ToDouble(result);
         }
 
-        private async Task Play(IVoiceChannel vc, Audio audio, CancellationToken cancellationToken)
+        public async Task Play(IVoiceChannel vc, Audio audio, CancellationToken cancellationToken)
         {
 
             using var s3object = await s3Client.GetObjectAsync("quotebot-audio-post", audio.Path, cancellationToken);
