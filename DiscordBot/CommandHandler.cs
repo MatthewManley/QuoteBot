@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using DiscordBot.Modules;
+using DiscordBot.Services;
 using Domain.Models;
 using Domain.Repositories;
 using Microsoft.Extensions.Caching.Memory;
@@ -25,6 +26,7 @@ namespace DiscordBot
         private readonly IQuoteBotRepo quoteBotRepo;
         private readonly IMemoryCache memoryCache;
         private readonly IUserJoinedRepo userJoinedRepo;
+        private readonly JoinService joinService;
         private readonly SemaphoreSlim semaphoreSlim = new(5, 5);
 
         public CommandHandler(
@@ -33,12 +35,14 @@ namespace DiscordBot
             IServerRepo serverRepo,
             IQuoteBotRepo quoteBotRepo,
             IMemoryCache memoryCache,
-            IUserJoinedRepo userJoined)
+            IUserJoinedRepo userJoined,
+            JoinService joinService)
         {
             this.serverRepo = serverRepo;
             this.quoteBotRepo = quoteBotRepo;
             this.memoryCache = memoryCache;
             this.userJoinedRepo = userJoined;
+            this.joinService = joinService;
             this.serviceProvider = serviceProvider;
             _client = client;
         }
@@ -70,35 +74,38 @@ namespace DiscordBot
             _client.UserVoiceStateUpdated += _client_UserVoiceStateUpdated;
         }
 
-        private async Task _client_UserVoiceStateUpdated(SocketUser arg1, SocketVoiceState previous, SocketVoiceState newState)
+        private async Task _client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState previous, SocketVoiceState newState)
         {
-            if (arg1.IsBot)
-                return;
-
-            if (newState.VoiceChannel is null)
-                return;
-
-            if (previous.VoiceChannel is not null && previous.VoiceChannel.Guild.Id == newState.VoiceChannel.Guild.Id)
-                return;
+            if (user.IsBot)
+                return;            
 
             _ = Task.Run(async () =>
             {
-                var key = $"userjoined={newState.VoiceChannel.Guild.Id}={arg1.Id}";
-                if (memoryCache.TryGetValue(key, out _))
+                if (newState.VoiceChannel is null && previous.VoiceChannel is not null)
+                {
+                    joinService.ProcessLeave(previous.VoiceChannel.Guild.Id, user.Id);
                     return;
-                memoryCache.Set(key, new object(), TimeSpan.FromMinutes(5));
-                var user_quotes = (await userJoinedRepo.GetJoinedAudioForUser(arg1.Id)).ToList();
-                if (user_quotes.Count == 1)
-                {
-                    var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                    await soundMod.Play(newState.VoiceChannel, user_quotes.First(), CancellationToken.None);
                 }
-                else if (user_quotes.Count > 1)
+
+                if (newState.VoiceChannel is not null && newState.VoiceChannel.Users.Count < 2)
                 {
-                    var audio = user_quotes[StaticRandom.Next(user_quotes.Count)];
-                    var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                    await soundMod.Play(newState.VoiceChannel, audio, CancellationToken.None);
-                }
+                    if (!joinService.ProcessShouldPlay(newState.VoiceChannel.Guild.Id, user.Id))
+                    {
+                        return;
+                    }
+                    var user_quotes = (await userJoinedRepo.GetJoinedAudioForUser(user.Id)).ToList();
+                    if (user_quotes.Count == 1)
+                    {
+                        var soundMod = serviceProvider.GetRequiredService<SoundModule>();
+                        await soundMod.Play(newState.VoiceChannel, user_quotes.First(), CancellationToken.None);
+                    }
+                    else if (user_quotes.Count > 1)
+                    {
+                        var audio = user_quotes[StaticRandom.Next(user_quotes.Count)];
+                        var soundMod = serviceProvider.GetRequiredService<SoundModule>();
+                        await soundMod.Play(newState.VoiceChannel, audio, CancellationToken.None);
+                    }
+                }                
             });
         }
 

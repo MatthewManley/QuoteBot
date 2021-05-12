@@ -50,6 +50,7 @@ namespace DiscordBot
                         .AddTransient<SoundModule>()
                         .AddSingleton<StatsService>()
                         .AddMemoryCache()
+                        .AddSingleton<JoinService>()
                         .ConfigureAwsServices(configuration)
                         .AddHostedService<Startup>();
                 })
