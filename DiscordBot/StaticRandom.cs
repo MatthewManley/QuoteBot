@@ -10,7 +10,7 @@ namespace DiscordBot
         static int seed = Environment.TickCount;
 
         static readonly ThreadLocal<Random> random =
-            new ThreadLocal<Random>(() => new Random(Interlocked.Increment(ref seed)));
+            new(() => new Random(Interlocked.Increment(ref seed)));
 
         public static int Next(int max)
         {

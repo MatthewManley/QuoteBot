@@ -7,9 +7,9 @@ namespace DiscordBot.Services
 {
     public class JoinService
     {
-        private object lockObject = new object();
+        private readonly object lockObject = new();
         // first key is server id, second key is user id
-        private Dictionary<ulong, Dictionary<ulong, UserGuildPlayStatus>> storage = new Dictionary<ulong, Dictionary<ulong, UserGuildPlayStatus>>();
+        private readonly Dictionary<ulong, Dictionary<ulong, UserGuildPlayStatus>> storage = new();
 
         public bool ProcessShouldPlay(ulong serverId, ulong userId)
         {
@@ -25,7 +25,7 @@ namespace DiscordBot.Services
                     playStatus = new UserGuildPlayStatus { LastLeft = DateTime.MinValue, CanPlay = true };
                     userStore.Add(userId, playStatus);
                 }
-                var returnValue = playStatus.CanPlay && DateTime.Now.AddMinutes(-5) > playStatus.LastLeft;
+                var returnValue = playStatus.CanPlay && DateTime.Now.AddMinutes(-2) > playStatus.LastLeft;
                 playStatus.CanPlay = false;
                 return returnValue;
             }

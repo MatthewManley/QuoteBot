@@ -19,7 +19,7 @@ namespace DiscordBot
             services.AddControllers();
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment _)
         {
             app.UseDeveloperExceptionPage();
             app.UseRouting();

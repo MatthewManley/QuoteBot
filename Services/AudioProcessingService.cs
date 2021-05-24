@@ -147,7 +147,7 @@ namespace Services
 
 
         //TODO: Do something with token parameter or remove parameter
-        private static async Task<Format> GetFormat(string path, CancellationToken token)
+        private static async Task<Format> GetFormat(string path, CancellationToken _)
         {
             var arguments = $"-v quiet -of json -hide_banner -show_entries format \"{path}\"";
             var proccessInfo = new ProcessStartInfo

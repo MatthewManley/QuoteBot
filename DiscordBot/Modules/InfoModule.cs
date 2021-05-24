@@ -81,8 +81,7 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("invite")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Needed for command handler")]
-        public async Task Invite(SocketCommandContext context, string[] commmand, ServerConfig serverConfig)
+        public async Task Invite(SocketCommandContext context, string[] _0, ServerConfig _1)
         {
             var app = await discordClient.GetApplicationInfoAsync();
             var invite = $"https://discordapp.com/api/oauth2/authorize?client_id={app.Id}&permissions=0&scope=bot";

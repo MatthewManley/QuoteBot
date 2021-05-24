@@ -23,25 +23,22 @@ namespace DiscordBot.Modules
         private readonly IQuoteBotRepo quoteBotRepo;
         private readonly StatsService statsService;
         private readonly IAmazonS3 s3Client;
-        private readonly IAudioRepo audioRepo;
         private readonly BotOptions botOptions;
 
         public SoundModule(
             IQuoteBotRepo quoteBotRepo,
             StatsService statsService,
             IAmazonS3 s3Client,
-            IOptions<BotOptions> botOptions,
-            IAudioRepo audioRepo)
+            IOptions<BotOptions> botOptions)
         {
             this.quoteBotRepo = quoteBotRepo;
             this.statsService = statsService;
             this.s3Client = s3Client;
-            this.audioRepo = audioRepo;
             this.botOptions = botOptions.Value;
         }
 
         [MyCommand("list")]
-        public async Task List(SocketCommandContext context, string[] command, ServerConfig serverConfig)
+        public async Task List(SocketCommandContext context, string[] command, ServerConfig _)
         {
             if (command.Length == 1)
             {
@@ -100,7 +97,7 @@ namespace DiscordBot.Modules
                 display = display.Skip(soundsPerPage * pageMinusOne).Take(soundsPerPage);
                 msg.Append("Page ");
                 msg.Append(page);
-                msg.Append("/");
+                msg.Append('/');
                 msg.Append(pages + 1);
                 msg.AppendLine();
             }
@@ -119,7 +116,7 @@ namespace DiscordBot.Modules
             var categories = await quoteBotRepo.GetCategoriesWithAudio(context.Guild.Id).ToList();
             var pageMinusOne = page - 1;
             const int categoriesPerPage = 30;
-            var pages = categories.Count() / categoriesPerPage;
+            var pages = categories.Count / categoriesPerPage;
             if (pageMinusOne > pages)
             {
                 var errorMsg = pages == 0 ?
@@ -143,7 +140,7 @@ namespace DiscordBot.Modules
             {
                 msg.Append("Page ");
                 msg.Append(page);
-                msg.Append("/");
+                msg.Append('/');
                 msg.Append(pages + 1);
                 msg.AppendLine();
             }
@@ -158,14 +155,14 @@ namespace DiscordBot.Modules
         }
 
         [MyCommand("history")]
-        public async Task History(SocketCommandContext context, string[] command, ServerConfig serverConfig)
+        public async Task History(SocketCommandContext context, string[] _0, ServerConfig _1)
         {
             var history = statsService.GetHistory(context.Guild.Id);
             await context.Reply(string.Join("\n", history.Select(x => $"{x.Category.Name} {x.NamedAudio.AudioOwner.Name}")));
         }
 
         [MyCommand("random")]
-        public async Task Random(SocketCommandContext context, string[] command, ServerConfig serverConfig)
+        public async Task Random(SocketCommandContext context, string[] _, ServerConfig serverConfig)
         {
             // If the bot is already in a voice channel in the server, then don't play a quote
             if (!((context.Guild.CurrentUser as IGuildUser)?.VoiceChannel is null))
@@ -369,20 +366,6 @@ namespace DiscordBot.Modules
             });
         }
 
-        private static async Task<double> GetDuration(string path)
-        {
-            using var proc = Process.Start(new ProcessStartInfo
-            {
-                FileName = "ffprobe",
-                Arguments = $"-show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i \"{path}\"",
-                UseShellExecute = false,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true
-            });
-            var result = await proc.StandardOutput.ReadToEndAsync();
-            return Convert.ToDouble(result);
-        }
-
         public async Task Play(IVoiceChannel vc, Audio audio, CancellationToken cancellationToken)
         {
 
@@ -393,7 +376,7 @@ namespace DiscordBot.Modules
             {
                 using var input = ffmpeg.StandardInput.BaseStream;
                 await s3object.ResponseStream.CopyToAsync(input, cancellationToken);
-            });
+            }, cancellationToken);
             using var audioClient = await vc.ConnectAsync();
             using var discord = audioClient.CreatePCMStream(AudioApplication.Mixed, bufferMillis: 1);
             try

@@ -74,11 +74,13 @@ namespace DiscordBot
             _client.UserVoiceStateUpdated += _client_UserVoiceStateUpdated;
         }
 
-        private async Task _client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState previous, SocketVoiceState newState)
+        private Task _client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState previous, SocketVoiceState newState)
         {
             if (user.IsBot)
-                return;            
+                return Task.CompletedTask;
 
+            CancellationTokenSource cts = new(5000);
+            var token = cts.Token;
             _ = Task.Run(async () =>
             {
                 if (newState.VoiceChannel is null && previous.VoiceChannel is not null)
@@ -87,7 +89,7 @@ namespace DiscordBot
                     return;
                 }
 
-                if (newState.VoiceChannel is not null && newState.VoiceChannel.Users.Count < 2)
+                if (newState.VoiceChannel is not null && newState.VoiceChannel.Users.Count > 1)
                 {
                     if (!joinService.ProcessShouldPlay(newState.VoiceChannel.Guild.Id, user.Id))
                     {
@@ -97,16 +99,17 @@ namespace DiscordBot
                     if (user_quotes.Count == 1)
                     {
                         var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                        await soundMod.Play(newState.VoiceChannel, user_quotes.First(), CancellationToken.None);
+                        await soundMod.Play(newState.VoiceChannel, user_quotes.First(), token);
                     }
                     else if (user_quotes.Count > 1)
                     {
                         var audio = user_quotes[StaticRandom.Next(user_quotes.Count)];
                         var soundMod = serviceProvider.GetRequiredService<SoundModule>();
-                        await soundMod.Play(newState.VoiceChannel, audio, CancellationToken.None);
+                        await soundMod.Play(newState.VoiceChannel, audio, token);
                     }
-                }                
-            });
+                }
+            }, token);
+            return Task.CompletedTask;
         }
 
         private async Task _client_JoinedGuild(SocketGuild arg)
@@ -229,7 +232,7 @@ namespace DiscordBot
                 return;
 
             var categories = await quoteBotRepo.GetCategoriesWithAudio(serverId.Value);
-            if (categories.Select(x => x.Name).Contains(command.First()))
+            if (categories.Select(x => x.Name.ToLowerInvariant()).Contains(command.First().ToLowerInvariant()))
             {
                 var context = new SocketCommandContext(_client, message);
                 var soundMod = serviceProvider.GetRequiredService<SoundModule>();
