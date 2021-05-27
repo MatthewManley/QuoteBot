@@ -89,6 +89,11 @@ namespace DiscordBot
                     return;
                 }
 
+                if (newState.VoiceChannel is not null && previous.VoiceChannel is not null && newState.VoiceChannel.Id == previous.VoiceChannel.Id)
+                {
+                    return;
+                }
+
                 if (newState.VoiceChannel is not null && newState.VoiceChannel.Users.Count > 1)
                 {
                     if (!joinService.ProcessShouldPlay(newState.VoiceChannel.Guild.Id, user.Id))
