@@ -83,14 +83,23 @@ namespace DiscordBot
             var token = cts.Token;
             _ = Task.Run(async () =>
             {
+                // User made an update within the same voice channel, do nothing
+                if (newState.VoiceChannel is not null && previous.VoiceChannel is not null && newState.VoiceChannel.Id == previous.VoiceChannel.Id)
+                {
+                    return;
+                }
+
+                // User left a voice channel and didn't join a new one, process leave
                 if (newState.VoiceChannel is null && previous.VoiceChannel is not null)
                 {
                     joinService.ProcessLeave(previous.VoiceChannel.Guild.Id, user.Id);
                     return;
                 }
 
-                if (newState.VoiceChannel is not null && previous.VoiceChannel is not null && newState.VoiceChannel.Id == previous.VoiceChannel.Id)
+                // User moved to afk channel, treat as leaving the server
+                if (newState.VoiceChannel is not null && newState.VoiceChannel.Guild.AFKChannel?.Id == newState.VoiceChannel.Id)
                 {
+                    joinService.ProcessLeave(previous.VoiceChannel.Guild.Id, user.Id);
                     return;
                 }
 
