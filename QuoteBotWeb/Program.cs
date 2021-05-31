@@ -16,7 +16,7 @@ namespace QuoteBotWeb
                 .ConfigureAppConfiguration((hostContext, builder) =>
                 {
                     var environment = hostContext.HostingEnvironment;
-                    builder.AddSystemsManager($"/QuoteBot/Production/");
+                    builder.AddSystemsManager($"/QuoteBot/{environment.EnvironmentName}/");
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

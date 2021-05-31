@@ -1,74 +1,51 @@
-//using System;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
-//using Discord;
-//using Discord.WebSocket;
-//using Microsoft.Extensions.Options;
+using System;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
+using Domain.Models;
+using Domain.Options;
+using Microsoft.Extensions.Options;
 
-//namespace DiscordBot.Modules
-//{
-//    public class AdminModule : MyCommandSet
-//    {
-//        private readonly IDiscordClient discordClient;
-//        private readonly BotOptions botOptions;
+namespace DiscordBot.Modules
+{
+    public class AdminModule : MyCommandSet
+    {
+        private readonly BotOptions botOptions;
+        private readonly HttpClient httpClient;
 
-//        public AdminModule(IDiscordClient discordClient, IOptions<BotOptions> botOptions)
-//        {
-//            this.discordClient = discordClient;
-//            this.botOptions = botOptions.Value;
-//        }
+        public AdminModule(IOptions<BotOptions> botOptions, HttpClient httpClient)
+        {
+            this.botOptions = botOptions.Value;
+            this.httpClient = httpClient;
+        }
 
-//        [MyCommand("listservers")]
-//        public async Task ListServers(string[] command, SocketUserMessage message)
-//        {
-//            if (!context.IsBotOwner(botOptions.OwnerValue))
-//            {
-//                await context.Reply("no");
-//                return;
-//            }
-//            var guilds = await discordClient.GetGuildsAsync();
-//            int argPos = 0;
-//            context.Message.HasPrefix(botOptions.Prefix, discordClient.CurrentUser, ref argPos);
-//            var commandParts = context.Message.Content.Substring(argPos).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-//            if (commandParts.Length != 1 && commandParts.Length != 2)
-//            {
-//                await context.Reply("u wat mate?");
-//                return;
-//            }
-//            int pageCount = guilds.Count / 10 + 1;
-//            int page = 0;
-//            if (commandParts.Length == 2)
-//            {
-//                if (!int.TryParse(commandParts[1], out page))
-//                {
-//                    await context.Reply("thats not a number");
-//                    return;
-//                }
-//                if (page > pageCount)
-//                {
-//                    await context.Reply($"There is only {pageCount} pages");
-//                    return;
-//                }
-//                page--;
-//            }
-//            var show = guilds.Skip(page * 10).Take(10).ToList();
-//            var builder = new StringBuilder();
-//            builder.Append("Total Servers: ");
-//            builder.Append(guilds.Count);
-//            builder.AppendLine();
-//            builder.Append("Page: ");
-//            builder.Append(page + 1);
-//            builder.Append("/");
-//            builder.Append(pageCount);
-//            foreach (var guild in show)
-//            {
-//                builder.AppendLine();
-//                builder.Append(guild.Id);
-//                builder.Append(": ");
-//                builder.Append(guild.Name);
-//            }
-//            await context.Reply(builder.ToString());
-//        }
-//    }
-//}
+        [MyCommand("deploy")]
+        public async Task Deploy(SocketCommandContext context, string[] command, ServerConfig _)
+        {
+            if (context.User.Id != botOptions.OwnerValue || context.Channel.Id != botOptions.AnnounceChannelValue || command.Length != 2)
+                return;
+            string endpoint;
+            if (command[1].ToLower() == "bot")
+            {
+                endpoint = "quotebot";
+            }
+            else if (command[1].ToLower() == "web")
+            {
+                endpoint = "quotebotweb";
+            }
+            else
+            {
+                return;
+            }
+            var uri = new Uri($"http://localhost:8081/{endpoint}");
+
+            var response = await httpClient.GetAsync(uri);
+            var result = await response.Content.ReadAsStringAsync();
+            await context.Reply(result);
+        }
+    }
+}

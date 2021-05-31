@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using QuoteBotWeb.Controllers;
 using Services;
 
@@ -32,6 +33,7 @@ namespace QuoteBotWeb
             services.ConfigureDiscordServices(Configuration);
             services.ConfigureAwsServices(Configuration);
             services.Configure<AuthOptions>(Configuration.GetSection("Auth"));
+            services.Configure<BotOptions>(Configuration.GetSection("Bot"));
             services.AddMemoryCache();
             services.ConfigureApplicationServices();
         }
@@ -49,6 +51,12 @@ namespace QuoteBotWeb
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
+            app.Use(async (context, next) =>
+            {
+                var botOptions = context.RequestServices.GetRequiredService<IOptions<BotOptions>>();
+                context.Items["owner"] = botOptions.Value.OwnerValue;
+                await next();
+            });
             app.AddAuthMiddleware();
             app.UseHttpsRedirection();
             app.UseStaticFiles();

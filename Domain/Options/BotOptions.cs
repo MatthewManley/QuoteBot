@@ -6,6 +6,8 @@ namespace Domain.Options
     {
         public string Owner { get; set; }
 
+        public string AnnounceChannel { get; set; }
+
         public string RecentCount { get; set; }
         private const int RecentCountDefault = 5;
 
@@ -32,5 +34,18 @@ namespace Domain.Options
                 throw new Exception("Invalid value for Owner configuration");
             }
         }
+
+        public ulong? AnnounceChannelValue
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(AnnounceChannel))
+                    return null;
+                if (ulong.TryParse(AnnounceChannel, out var result))
+                    return result;
+                throw new Exception("Invalid value for AnnounceChannel configuration");
+            }
+        }
+
     }
 }

@@ -1,9 +1,12 @@
-﻿@{ 
+﻿@{
     bool loggedIn = Context.Items.ContainsKey("key") && Context.Items["key"] != null;
     Domain.Models.AuthEntry authEntry = null;
+    bool isOwner = false;
     if (loggedIn)
     {
         authEntry = (Domain.Models.AuthEntry)Context.Items["key"];
+        ulong? ownerId = (ulong?)Context.Items["owner"];
+        isOwner = ownerId is not null && authEntry.UserId == ownerId.Value;
     }
 }
 
@@ -14,7 +17,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Quote Bot</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    @await RenderSectionAsync("testing", required: false)
     <link rel="stylesheet" href="~/css/site.css" />
     <link rel="shortcut icon" type="image/png" href="/favicon.png" />
 </head>
@@ -37,6 +39,12 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Guild" asp-action="Index">Guilds</a>
                             </li>
+                            @if (isOwner)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">Admin</a>
+                                </li>
+                            }
                             <li>
                                 <a class="btn btn-danger" href="/logout">Logout</a>
                             </li>
