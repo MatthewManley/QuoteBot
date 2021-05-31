@@ -41,7 +41,7 @@ namespace DiscordBot.Modules
             {
                 return;
             }
-            var uri = new Uri($"http://localhost:8081/{endpoint}");
+            var uri = new Uri($"http://localhost:8080/{endpoint}");
 
             var response = await httpClient.GetAsync(uri);
             var result = await response.Content.ReadAsStringAsync();
